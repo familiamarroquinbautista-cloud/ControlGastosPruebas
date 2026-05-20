@@ -697,16 +697,6 @@
       </div>
     </div>
 
-    <!-- Navegación módulos -->
-    <div class="nav-modulos">
-      <h2>MÓDULOS</h2>
-      <div class="nav-botones">
-        <button class="btn-modulo" onclick="window.location.href='presupuesto.html'">Presupuesto</button>
-        <button class="btn-modulo" onclick="window.location.href='comparar.html'">Comparar</button>
-        <button class="btn-modulo" onclick="window.location.href='checklist.html'">Checklist</button>
-      </div>
-    </div>
-
     <!-- Saldo disponible -->
     <div class="saldo-card">
       <div class="saldo-principal">
@@ -834,6 +824,16 @@
       <h2>📋 HISTORIAL DE MOVIMIENTOS</h2>
       <div id="historialContainer" class="historial-container">
         <div class="empty-state">Cargando historial...</div>
+      </div>
+    </div>
+
+    <!-- Navegación módulos -->
+    <div class="nav-modulos">
+      <h2>MÓDULOS</h2>
+      <div class="nav-botones">
+        <button class="btn-modulo" onclick="window.location.href='presupuesto.html'">Presupuesto</button>
+        <button class="btn-modulo" onclick="window.location.href='comparar.html'">Comparar</button>
+        <button class="btn-modulo" onclick="window.location.href='checklist.html'">Checklist</button>
       </div>
     </div>
 
@@ -1128,13 +1128,11 @@
 
     async function calcularSaldo() {
       try {
-        const mesActual = new Date().getMonth() + 1;
         const añoActual = new Date().getFullYear();
         
         const ingresosQuery = query(
           collection(db, "ingresos"),
           where("usuario", "==", perfil),
-          where("mes", "==", mesActual),
           where("año", "==", añoActual)
         );
         const ingresosSnap = await getDocs(ingresosQuery);
@@ -1147,7 +1145,6 @@
         const gastosQuery = query(
           collection(db, "gastos"),
           where("usuario", "==", perfil),
-          where("mes", "==", mesActual),
           where("año", "==", añoActual)
         );
         const gastosSnap = await getDocs(gastosQuery);
@@ -1181,13 +1178,11 @@
     
     async function cargarHistorial() {
       try {
-        const mesActual = new Date().getMonth() + 1;
         const añoActual = new Date().getFullYear();
         
         const ingresosQuery = query(
           collection(db, "ingresos"),
           where("usuario", "==", perfil),
-          where("mes", "==", mesActual),
           where("año", "==", añoActual)
         );
         const ingresosSnap = await getDocs(ingresosQuery);
@@ -1195,7 +1190,6 @@
         const gastosQuery = query(
           collection(db, "gastos"),
           where("usuario", "==", perfil),
-          where("mes", "==", mesActual),
           where("año", "==", añoActual)
         );
         const gastosSnap = await getDocs(gastosQuery);
@@ -1244,7 +1238,7 @@
       const container = document.getElementById('historialContainer');
       
       if (movimientos.length === 0) {
-        container.innerHTML = '<div class="empty-state">No hay movimientos este mes</div>';
+        container.innerHTML = '<div class="empty-state">No hay movimientos este año</div>';
         return;
       }
 
