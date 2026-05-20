@@ -179,7 +179,7 @@
 
     .saldo-detalle {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 0.3rem;
       text-align: center;
       font-size: 0.8rem;
@@ -714,6 +714,10 @@
           <div class="label">Gastos (E/D)</div>
           <div class="valor" id="totalGastosDebito">$0</div>
         </div>
+        <div class="detalle-item">
+          <div class="label">DIF MES</div>
+          <div class="valor" id="diferenciaMes">$0</div>
+        </div>
         <div class="detalle-item" style="position: relative;">
           <div class="label" style="display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
             Gastos Tarjeta
@@ -1197,6 +1201,11 @@
         document.getElementById('totalIngresos').innerText = `$${totalIngresosMensual}`;
         document.getElementById('totalGastosDebito').innerText = `$${totalGastosDebitoMensual}`;
         document.getElementById('totalGastosTarjeta').innerText = `$${totalGastosTarjetaMensual}`;
+
+        const diferenciaMensual = totalIngresosMensual - totalGastosDebitoMensual;
+        const diferenciaElement = document.getElementById('diferenciaMes');
+        diferenciaElement.innerText = `${diferenciaMensual >= 0 ? '$' + diferenciaMensual : '-$' + Math.abs(diferenciaMensual)}`;
+        diferenciaElement.className = `valor ${diferenciaMensual >= 0 ? 'saldo-positivo' : 'saldo-negativo'}`;
 
         const saldoElement = document.getElementById('saldoDisponible');
         saldoElement.innerText = `$${saldo}`;
