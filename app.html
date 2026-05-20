@@ -1129,44 +1129,75 @@
     async function calcularSaldo() {
       try {
         const añoActual = new Date().getFullYear();
-        
-        const ingresosQuery = query(
+        const mesActual = new Date().getMonth() + 1;
+
+        // Saldo histórico anual
+        const ingresosAnualesQuery = query(
           collection(db, "ingresos"),
           where("usuario", "==", perfil),
           where("año", "==", añoActual)
         );
-        const ingresosSnap = await getDocs(ingresosQuery);
-        
-        let totalIngresos = 0;
-        ingresosSnap.forEach(doc => {
-          totalIngresos += doc.data().monto;
+        const ingresosAnualesSnap = await getDocs(ingresosAnualesQuery);
+
+        let totalIngresosAnual = 0;
+        ingresosAnualesSnap.forEach(doc => {
+          totalIngresosAnual += doc.data().monto;
         });
 
-        const gastosQuery = query(
+        const gastosAnualesQuery = query(
           collection(db, "gastos"),
           where("usuario", "==", perfil),
           where("año", "==", añoActual)
         );
-        const gastosSnap = await getDocs(gastosQuery);
-        
-        let totalGastosDebito = 0;
-        let totalGastosTarjeta = 0;
-        
-        gastosSnap.forEach(doc => {
+        const gastosAnualesSnap = await getDocs(gastosAnualesQuery);
+
+        let totalGastosDebitoAnual = 0;
+        gastosAnualesSnap.forEach(doc => {
           const data = doc.data();
-          if (data.metodoPago === 'credito') {
-            totalGastosTarjeta += data.monto;
-          } else {
-            totalGastosDebito += data.monto;
+          if (data.metodoPago !== 'credito') {
+            totalGastosDebitoAnual += data.monto;
           }
         });
 
-        const saldo = totalIngresos - totalGastosDebito;
-        
-        document.getElementById('totalIngresos').innerText = `$${totalIngresos}`;
-        document.getElementById('totalGastosDebito').innerText = `$${totalGastosDebito}`;
-        document.getElementById('totalGastosTarjeta').innerText = `$${totalGastosTarjeta}`;
-        
+        const saldo = totalIngresosAnual - totalGastosDebitoAnual;
+
+        // Totales del mes actual para las tarjetas individuales
+        const ingresosMensualesQuery = query(
+          collection(db, "ingresos"),
+          where("usuario", "==", perfil),
+          where("año", "==", añoActual),
+          where("mes", "==", mesActual)
+        );
+        const ingresosMensualesSnap = await getDocs(ingresosMensualesQuery);
+
+        let totalIngresosMensual = 0;
+        ingresosMensualesSnap.forEach(doc => {
+          totalIngresosMensual += doc.data().monto;
+        });
+
+        const gastosMensualesQuery = query(
+          collection(db, "gastos"),
+          where("usuario", "==", perfil),
+          where("año", "==", añoActual),
+          where("mes", "==", mesActual)
+        );
+        const gastosMensualesSnap = await getDocs(gastosMensualesQuery);
+
+        let totalGastosDebitoMensual = 0;
+        let totalGastosTarjetaMensual = 0;
+        gastosMensualesSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.metodoPago === 'credito') {
+            totalGastosTarjetaMensual += data.monto;
+          } else {
+            totalGastosDebitoMensual += data.monto;
+          }
+        });
+
+        document.getElementById('totalIngresos').innerText = `$${totalIngresosMensual}`;
+        document.getElementById('totalGastosDebito').innerText = `$${totalGastosDebitoMensual}`;
+        document.getElementById('totalGastosTarjeta').innerText = `$${totalGastosTarjetaMensual}`;
+
         const saldoElement = document.getElementById('saldoDisponible');
         saldoElement.innerText = `$${saldo}`;
         saldoElement.className = `saldo-valor ${saldo >= 0 ? 'saldo-positivo' : 'saldo-negativo'}`;
