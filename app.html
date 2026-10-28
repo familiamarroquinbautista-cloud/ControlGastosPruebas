@@ -424,35 +424,6 @@
       color: rgba(255,255,255,0.3);
     }
 
-    .descripcion-voz {
-      display: flex;
-      gap: 8px;
-    }
-
-    .descripcion-voz input {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .btn-voz {
-      display: none;
-      flex: 0 0 48px;
-      border: none;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.15);
-      font-size: 22px;
-      cursor: pointer;
-    }
-
-    .btn-voz.escuchando {
-      background: #c0392b;
-      animation: pulsoVoz 1s infinite;
-    }
-
-    @keyframes pulsoVoz {
-      50% { opacity: 0.5; }
-    }
-
     .campo input[type="text"] {
       -moz-appearance: textfield;
       appearance: textfield;
@@ -809,10 +780,7 @@
         
         <div class="campo">
           <label>Descripción (opcional)</label>
-          <div class="descripcion-voz">
-            <input type="text" id="descripcionGasto" placeholder="Ej: Compra semanal" inputmode="text">
-            <button type="button" id="btnVozGasto" class="btn-voz" onclick="iniciarDictado()" title="Dictar descripción">🎤</button>
-          </div>
+          <input type="text" id="descripcionGasto" placeholder="Ej: Compra semanal" inputmode="text">
         </div>
         
         <div class="campo-row">
@@ -1465,37 +1433,6 @@
       window.seleccionarMetodoPago('debito');
       window.cambiarTipoMovimiento('gasto');
     }, 100);
-
-    // ===== DICTADO POR VOZ (perfil Andres) =====
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let reconocimiento = null;
-
-    window.iniciarDictado = function() {
-      if (!reconocimiento) return;
-      try { reconocimiento.start(); } catch (e) { /* ya está escuchando */ }
-    };
-
-    if (perfil === 'Andres' && SpeechRecognition) {
-      const btnVoz = document.getElementById('btnVozGasto');
-      const inputDescripcion = document.getElementById('descripcionGasto');
-      btnVoz.style.display = 'block';
-
-      reconocimiento = new SpeechRecognition();
-      reconocimiento.lang = 'es-CO';
-      reconocimiento.interimResults = true;
-
-      reconocimiento.onstart = () => btnVoz.classList.add('escuchando');
-      reconocimiento.onend = () => btnVoz.classList.remove('escuchando');
-      reconocimiento.onresult = (event) => {
-        inputDescripcion.value = Array.from(event.results).map(r => r[0].transcript).join('');
-      };
-
-      // Al abrir el perfil se intenta escuchar de una vez; si el navegador exige un toque, queda el botón 🎤
-      setTimeout(() => {
-        inputDescripcion.focus();
-        window.iniciarDictado();
-      }, 300);
-    }
   </script>
 </body>
 </html>
