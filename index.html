@@ -36,7 +36,7 @@ body{
   justify-content:center;
   align-items:center;
   z-index:1000;
-  transition:opacity .6s ease, visibility .6s ease;
+  transition:opacity .3s ease, visibility .3s ease;
 }
 
 .splash-screen.fade-out{
@@ -48,7 +48,7 @@ body{
   font-size:2.6rem;
   font-weight:300;
   letter-spacing:3px;
-  animation:fadeUp 1.5s ease forwards;
+  animation:fadeUp .75s ease forwards;
   text-shadow:0 0 12px rgba(255,255,255,.08);
 }
 
@@ -58,8 +58,8 @@ body{
   letter-spacing:2px;
   color:#94a3b8;
   opacity:0;
-  animation:fadeUp 1.5s ease forwards;
-  animation-delay:.4s;
+  animation:fadeUp .75s ease forwards;
+  animation-delay:.2s;
 }
 
 @keyframes fadeUp{
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function(){
   setTimeout(()=>{
     splash.classList.add('fade-out');
     main.classList.add('visible');
-  }, 2500);
+  }, 1250);
 });
 
 /* TRANSICIÓN TIPO APPLE WALLET */
