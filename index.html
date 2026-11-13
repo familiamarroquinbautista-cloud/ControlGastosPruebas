@@ -4,7 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>App Marsol</title>
-<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="preload" as="image" href="img/splash/1.jpg">
+<link rel="preload" as="image" href="img/splash/2.jpg">
+<script>
+/* Recargar (y repetir el splash) cada vez que se vuelve a la página:
+   - restaurada desde caché atrás/adelante (bfcache, típico en iPhone/Safari)
+   - al volver a la pestaña o a la app tras haberla dejado */
+addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
+let pageWasHidden = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') pageWasHidden = true;
+  else if (pageWasHidden) location.reload();
+});
+</script>
 
 <style>
 
@@ -86,7 +98,7 @@ body{
   display:flex;
   align-items:flex-end;
   padding:14px;
-  background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.1) 55%,transparent);
+  background:linear-gradient(to top,rgba(0,0,0,.45),transparent 45%);
   font:500 .72rem ui-monospace,SFMono-Regular,Menlo,monospace;
   letter-spacing:.2em;
   text-transform:uppercase;
@@ -271,18 +283,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const center = document.getElementById('splashCenter');
   const skip = document.getElementById('splashSkip');
 
-  const U = id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=400&q=70`;
-  const IMAGES = [
-    ['1554224155-6726b3ff858f','Presupuesto'],
-    ['1511895426328-dc8714191300','Familia'],
-    ['1579621970563-ebec7560ff3e','Ahorro'],
-    ['1600585154340-be6161a56a0c','Hogar'],
-    ['1556742049-0cfed4f6a45d','Pagos'],
-    ['1518199266791-5375a83190b7','Juntos'],
-    ['1460925895917-afdab827c52f','Resumen'],
-    ['1522708323590-d24dbb6b0267','Apto'],
-    ['1526304640581-d334cdbbf45e','Metas']
-  ];
+  // fotos propias (img/splash/1-5.jpg), dos pasadas para llenar el túnel
+  const IMAGES = [1,2,3,4,5,3,1,5,2,4].map(n => `img/splash/${n}.jpg`);
   const N = IMAGES.length, SPAN = .55, DURATION = 2600;
   const clamp = v => Math.min(1, Math.max(0, v));
   const lerp = (v, a, b) => a + (b - a) * v;
@@ -294,12 +296,12 @@ document.addEventListener('DOMContentLoaded', function(){
     return ys[ys.length - 1];
   };
 
-  const cards = IMAGES.map(([id, title], i) => {
+  const cards = IMAGES.map((src, i) => {
     const a = i * 137.5 * Math.PI / 180;
     const el = document.createElement('div');
     el.className = 't-card';
     el.style.zIndex = i + 1;
-    el.innerHTML = `<img src="${U(id)}" alt="" draggable="false" decoding="async"><span>${title}</span>`;
+    el.innerHTML = `<img src="${src}" alt="" draggable="false" decoding="async"><span></span>`;
     el.querySelector('img').onerror = function(){ this.remove(); };
     tunnel.appendChild(el);
     return {
