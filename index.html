@@ -256,6 +256,10 @@ body{
 .orb-btn .ms{width:38px;height:38px;flex:none;filter:drop-shadow(0 3px 8px #0ea5e966);transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
 .orb-btn:hover{transform:translateY(-2px);box-shadow:0 0 26px #7dd3fc40,0 8px 24px #0007,inset 0 1px 0 #ffffff1f}
 .orb-btn:hover .ms{transform:scale(1.12)}
+.orb-btn.maria{border-color:#f9a8d455}.orb-btn.maria .ms{filter:drop-shadow(0 3px 10px #f472b688)}
+.orb-btn.maria:hover{box-shadow:0 0 26px #f472b650,0 8px 24px #0007,inset 0 1px 0 #ffffff1f}
+.orb-btn.andres{border-color:#3b82f655}.orb-btn.andres .ms{filter:drop-shadow(0 3px 10px #1e3a8acc)}
+.orb-btn.andres:hover{box-shadow:0 0 26px #2563eb50,0 8px 24px #0007,inset 0 1px 0 #ffffff1f}
 .orb-btn:active{transform:scale(.96)}
 .fan{position:relative;flex:none;width:100%;--w:clamp(130px,min(44vw,30vh),230px);--paso:clamp(62px,19vw,125px);height:calc(var(--w) * 1.4667 - 36px)}
 .fan .card{position:absolute;bottom:-36px;left:50%;width:var(--w);aspect-ratio:3/4.4;margin-left:calc(var(--w) / -2);border-radius:18px;overflow:hidden;
@@ -290,15 +294,15 @@ body{
   <div id="splashSkip" class="splash-skip"><span>Toca para entrar</span><i></i></div>
 </div>
 
-<!-- Ícono Marsol (mar + sol): cielo al atardecer, sol en el horizonte y olas animadas -->
+<!-- Ícono Marsol (mar + sol): base (logo), rosa princesa (María) y azul marino (Andrés) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
+    <radialGradient id="ms-brillo" cx=".32" cy=".22" r=".55"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <clipPath id="ms-c"><circle cx="32" cy="32" r="30"/></clipPath>
     <linearGradient id="ms-cielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e1b4b"/><stop offset=".42" stop-color="#6d28d9"/><stop offset=".58" stop-color="#ec4899"/><stop offset=".68" stop-color="#fdba74"/></linearGradient>
     <radialGradient id="ms-sol"><stop offset="0" stop-color="#fffbeb"/><stop offset=".5" stop-color="#fde68a"/><stop offset="1" stop-color="#fb923c"/></radialGradient>
     <linearGradient id="ms-mar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset=".55" stop-color="#0369a1"/><stop offset="1" stop-color="#172554"/></linearGradient>
     <linearGradient id="ms-ola" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5f3fc"/><stop offset=".4" stop-color="#22d3ee"/><stop offset="1" stop-color="#0e7490" stop-opacity=".2"/></linearGradient>
-    <radialGradient id="ms-brillo" cx=".32" cy=".22" r=".55"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-    <clipPath id="ms-c"><circle cx="32" cy="32" r="30"/></clipPath>
     <symbol id="marsol" viewBox="0 0 64 64">
       <g clip-path="url(#ms-c)">
         <rect width="64" height="64" fill="url(#ms-cielo)"/>
@@ -310,20 +314,50 @@ body{
       <circle cx="32" cy="32" r="30" fill="url(#ms-brillo)"/>
       <circle cx="32" cy="32" r="30.3" fill="none" stroke="#ffffff66" stroke-width="1.2"/>
     </symbol>
+    <linearGradient id="ms-cielo-maria" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a855f7"/><stop offset=".42" stop-color="#e879f9"/><stop offset=".58" stop-color="#f9a8d4"/><stop offset=".68" stop-color="#ffe4f1"/></linearGradient>
+    <radialGradient id="ms-sol-maria"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#fde7f3"/><stop offset="1" stop-color="#f9a8d4"/></radialGradient>
+    <linearGradient id="ms-mar-maria" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9a8d4"/><stop offset=".55" stop-color="#db2777"/><stop offset="1" stop-color="#701a75"/></linearGradient>
+    <linearGradient id="ms-ola-maria" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe4f1"/><stop offset=".4" stop-color="#f472b6"/><stop offset="1" stop-color="#9d174d" stop-opacity=".2"/></linearGradient>
+    <symbol id="marsol-maria" viewBox="0 0 64 64">
+      <g clip-path="url(#ms-c)">
+        <rect width="64" height="64" fill="url(#ms-cielo-maria)"/>
+        <circle cx="32" cy="39" r="12" fill="url(#ms-sol-maria)"><animate attributeName="r" values="11.5;12.5;11.5" dur="5s" repeatCount="indefinite"/></circle>
+        <path d="M-32 39q8-3 16 0t16 0t16 0t16 0t16 0t16 0t16 0t16 0V64H-32Z" fill="url(#ms-mar-maria)"><animateTransform attributeName="transform" type="translate" from="0 0" to="32 0" dur="5s" repeatCount="indefinite"/></path>
+        <path d="M-32 46q8 3 16 0t16 0t16 0t16 0t16 0t16 0t16 0t16 0V64H-32Z" fill="url(#ms-ola-maria)" opacity=".85"><animateTransform attributeName="transform" type="translate" from="0 0" to="-32 0" dur="3.6s" repeatCount="indefinite"/></path>
+        <path d="M25 42.5h5M34 42.5h4M29 48h6" stroke="#fff7ed" stroke-width=".7" stroke-linecap="round" opacity=".5"><animate attributeName="opacity" values=".15;.6;.15" dur="2.8s" repeatCount="indefinite"/></path>
+      </g>
+      <circle cx="32" cy="32" r="30" fill="url(#ms-brillo)"/>
+      <circle cx="32" cy="32" r="30.3" fill="none" stroke="#ffffff66" stroke-width="1.2"/>
+    </symbol>
+    <linearGradient id="ms-cielo-andres" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020617"/><stop offset=".42" stop-color="#0b1a4a"/><stop offset=".58" stop-color="#172e6e"/><stop offset=".68" stop-color="#2b4f9e"/></linearGradient>
+    <radialGradient id="ms-sol-andres"><stop offset="0" stop-color="#fffbeb"/><stop offset=".5" stop-color="#fde68a"/><stop offset="1" stop-color="#d97706"/></radialGradient>
+    <linearGradient id="ms-mar-andres" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e3a8a"/><stop offset=".55" stop-color="#14245c"/><stop offset="1" stop-color="#030712"/></linearGradient>
+    <linearGradient id="ms-ola-andres" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b7bc4"/><stop offset=".4" stop-color="#1e3a8a"/><stop offset="1" stop-color="#050b24" stop-opacity=".2"/></linearGradient>
+    <symbol id="marsol-andres" viewBox="0 0 64 64">
+      <g clip-path="url(#ms-c)">
+        <rect width="64" height="64" fill="url(#ms-cielo-andres)"/>
+        <circle cx="32" cy="39" r="12" fill="url(#ms-sol-andres)"><animate attributeName="r" values="11.5;12.5;11.5" dur="5s" repeatCount="indefinite"/></circle>
+        <path d="M-32 39q8-3 16 0t16 0t16 0t16 0t16 0t16 0t16 0t16 0V64H-32Z" fill="url(#ms-mar-andres)"><animateTransform attributeName="transform" type="translate" from="0 0" to="32 0" dur="5s" repeatCount="indefinite"/></path>
+        <path d="M-32 46q8 3 16 0t16 0t16 0t16 0t16 0t16 0t16 0t16 0V64H-32Z" fill="url(#ms-ola-andres)" opacity=".85"><animateTransform attributeName="transform" type="translate" from="0 0" to="-32 0" dur="3.6s" repeatCount="indefinite"/></path>
+        <path d="M25 42.5h5M34 42.5h4M29 48h6" stroke="#fff7ed" stroke-width=".7" stroke-linecap="round" opacity=".5"><animate attributeName="opacity" values=".15;.6;.15" dur="2.8s" repeatCount="indefinite"/></path>
+      </g>
+      <circle cx="32" cy="32" r="30" fill="url(#ms-brillo)"/>
+      <circle cx="32" cy="32" r="30.3" fill="none" stroke="#ffffff66" stroke-width="1.2"/>
+    </symbol>
   </defs>
 </svg>
 <!-- MAIN: hero con tarjetas en abanico -->
 <div id="mainContent" class="main-content hero">
   <nav class="hero-nav">
-    <div class="hero-logo"><svg class="ms"><use href="#marsol"/></svg><b>App Marsol</b></div>
+    <div class="hero-logo"><svg class="ms"><use href="#marsol"/></svg></div>
     <span class="hero-tag">Control de gastos</span>
   </nav>
   <div class="hero-body">
     <div class="hero-top">
     <h1 class="a1">Dime <em>quién eres</em></h1>
     <div class="hero-btns a3">
-      <button class="orb-btn" onclick="seleccionarPerfil('Maria')"><svg class="ms"><use href="#marsol"/></svg><span>Soy María</span></button>
-      <button class="orb-btn" onclick="seleccionarPerfil('Andres')"><svg class="ms"><use href="#marsol"/></svg><span>Soy Andrés</span></button>
+      <button class="orb-btn maria" onclick="seleccionarPerfil('Maria')"><svg class="ms"><use href="#marsol-maria"/></svg><span>Soy María</span></button>
+      <button class="orb-btn andres" onclick="seleccionarPerfil('Andres')"><svg class="ms"><use href="#marsol-andres"/></svg><span>Soy Andrés</span></button>
     </div>
     </div>
     <div class="fan" aria-hidden="true">
