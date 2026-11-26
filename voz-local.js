@@ -42,7 +42,7 @@ export function crearGrabadora({ alEstado, alTexto, alError }) {
       let s = 0; for (let i = 0; i < d.length; i++) s += d[i] * d[i];
       const rms = Math.sqrt(s / d.length), ahora = performance.now();
       if (rms > 0.02) { if (habla) voz += ahora - ultimaVoz < 300 ? ahora - ultimaVoz : 0; habla = true; ultimaVoz = ahora; }
-      if (habla && ahora - ultimaVoz > (voz < 1200 ? 1700 : 750)) detener(); // frase corta ("dime…"): espera más; si no, 0,75 s
+      if (habla && ahora - ultimaVoz > (voz < 600 ? 1400 : 700)) detener(); // solo "dime…" suelto espera más; si no, 0,7 s
       else if (!habla && ahora - t0 > 6000) detener(true);       // no habló
       else if (ahora - t0 > 15000) detener();                    // máximo 15 s
     };

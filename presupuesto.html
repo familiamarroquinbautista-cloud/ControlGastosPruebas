@@ -434,9 +434,15 @@
         </div>
         
         <div class="subcategoria">
-          <label>Couta inicial apto</label>
-          <input type="text" id="presupuesto_hogar_couta_inicial" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <button class="btn-guardar" onclick="guardarPresupuesto('Hogar', 'Couta inicial apto', 'presupuesto_hogar_couta_inicial')">Guardar</button>
+          <label>Hipoteca</label>
+          <input type="text" id="presupuesto_hogar_hipoteca" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <button class="btn-guardar" onclick="guardarPresupuesto('Hogar', 'Hipoteca', 'presupuesto_hogar_hipoteca')">Guardar</button>
+        </div>
+        
+        <div class="subcategoria">
+          <label>Administración y Parqueadero</label>
+          <input type="text" id="presupuesto_hogar_admin" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <button class="btn-guardar" onclick="guardarPresupuesto('Hogar', 'Administración y Parqueadero', 'presupuesto_hogar_admin')">Guardar</button>
         </div>
       </div>
 
@@ -447,15 +453,21 @@
         </div>
         
         <div class="subcategoria">
-          <label>Couta FNA</label>
-          <input type="text" id="presupuesto_finanzas_fna" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <button class="btn-guardar" onclick="guardarPresupuesto('Finanzas', 'Couta FNA', 'presupuesto_finanzas_fna')">Guardar</button>
-        </div>
-        
-        <div class="subcategoria">
           <label>Couta Coasmedas</label>
           <input type="text" id="presupuesto_finanzas_coasmedas" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           <button class="btn-guardar" onclick="guardarPresupuesto('Finanzas', 'Couta Coasmedas', 'presupuesto_finanzas_coasmedas')">Guardar</button>
+        </div>
+        
+        <div class="subcategoria">
+          <label>Couta Prestamo</label>
+          <input type="text" id="presupuesto_finanzas_prestamo" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <button class="btn-guardar" onclick="guardarPresupuesto('Finanzas', 'Couta Prestamo', 'presupuesto_finanzas_prestamo')">Guardar</button>
+        </div>
+        
+        <div class="subcategoria">
+          <label>Cadena</label>
+          <input type="text" id="presupuesto_finanzas_cadena" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <button class="btn-guardar" onclick="guardarPresupuesto('Finanzas', 'Cadena', 'presupuesto_finanzas_cadena')">Guardar</button>
         </div>
       </div>
 
@@ -487,6 +499,18 @@
           <label>Mantenimientos</label>
           <input type="text" id="presupuesto_transporte_mantenimientos" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           <button class="btn-guardar" onclick="guardarPresupuesto('Transporte', 'Mantenimientos', 'presupuesto_transporte_mantenimientos')">Guardar</button>
+        </div>
+        
+        <div class="subcategoria">
+          <label>Mantenimiento moto</label>
+          <input type="text" id="presupuesto_transporte_mant_moto" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <button class="btn-guardar" onclick="guardarPresupuesto('Transporte', 'Mantenimiento moto', 'presupuesto_transporte_mant_moto')">Guardar</button>
+        </div>
+        
+        <div class="subcategoria">
+          <label>Documentos moto</label>
+          <input type="text" id="presupuesto_transporte_docs_moto" placeholder="Monto" inputmode="numeric" pattern="\d*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <button class="btn-guardar" onclick="guardarPresupuesto('Transporte', 'Documentos moto', 'presupuesto_transporte_docs_moto')">Guardar</button>
         </div>
       </div>
 
