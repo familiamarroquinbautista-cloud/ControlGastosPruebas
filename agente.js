@@ -13,6 +13,13 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
   const btn = Object.assign(document.createElement('button'), { textContent: '🎙️', title: 'Agente de voz' });
   btn.style.cssText = 'position:fixed;right:18px;bottom:18px;width:64px;height:64px;border-radius:50%;border:0;font-size:28px;box-shadow:0 4px 14px #0004;cursor:pointer;z-index:9999;background:#3fb68b';
   document.body.appendChild(btn);
+  const tst = document.createElement('div');
+  tst.style.cssText = 'position:fixed;right:18px;bottom:92px;max-width:80vw;padding:10px 14px;border-radius:10px;background:#1f7a55;color:#fff;font:600 15px system-ui;box-shadow:0 4px 14px #0004;z-index:9999;display:none';
+  document.body.appendChild(tst);
+  const aviso = (t, tipo = 'exito') => {
+    mostrarMensaje(t, tipo); tst.textContent = t; tst.style.display = 'block';
+    navigator.vibrate?.(120); clearTimeout(aviso.h); aviso.h = setTimeout(() => (tst.style.display = 'none'), 4000);
+  };
 
   const fecha = () => { const d = new Date(); return { fecha: d, mes: d.getMonth() + 1, año: d.getFullYear() }; };
   const tools = {
@@ -24,13 +31,15 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
         usuario: perfil, categoria, subcategoria, descripcion: (a.descripcion || 'Sin descripción').slice(0, 120), monto,
         metodoPago: a.metodo === 'credito' ? 'credito' : 'debito', ...fecha(), tipoMov: 'gasto'
       });
-      refrescar(); return `ok ${COP(monto)} ${categoria}/${subcategoria}`;
+      refrescar(); aviso(`✅ Gasto registrado: ${COP(monto)} en ${categoria} - ${subcategoria}`, 'exito');
+      return `ok ${COP(monto)} ${categoria}/${subcategoria}`;
     },
     registrar_ingreso: async a => {
       const monto = Math.round(+a.monto); if (!(monto > 0)) return 'error: monto inválido';
       const tipoIngreso = pick(ingresos, a.tipo, 'Otros');
       await addDoc(collection(db, 'ingresos'), { usuario: perfil, tipoIngreso, descripcion: (a.descripcion || 'Sin descripción').slice(0, 120), monto, ...fecha(), tipoMov: 'ingreso' });
-      refrescar(); return `ok ingreso ${COP(monto)} ${tipoIngreso}`;
+      refrescar(); aviso(`✅ Ingreso registrado: ${COP(monto)} (${tipoIngreso})`, 'exito');
+      return `ok ingreso ${COP(monto)} ${tipoIngreso}`;
     },
     consultar_gastos: async a => {
       const { mes, año } = fecha();
