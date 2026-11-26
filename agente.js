@@ -48,7 +48,16 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   }
   const consultas = crearConsultas({ db, perfil, cats, fs });
   const recs = crearRecordatorios({ db, perfil, fs });
-  recs.avisoInicio().then(m => m && aviso(m, 'info', 10000)).catch(() => {});
+  const avisarPendientes = () => recs.avisoInicio().then(m => m && aviso(m, 'info', 10000)).catch(() => {});
+  avisarPendientes();
+  // Al volver a la app (iPhone/Android): refresca datos sin recargar la página.
+  // Recargar la página haría que iOS vuelva a pedir el permiso del micrófono.
+  let oculta = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { oculta = Date.now(); sesion?.cancelar(); return; }
+    if (Date.now() - oculta < 3000) return;
+    consultas.limpiar(); recs.limpiar(); refrescar(); avisarPendientes();
+  });
   const PEND = /pendiente|por pagar|recordatorio|vence|venc|proxim\w* pago|tengo que pagar|que debo/;
 
   // Orden: pregunta ("dime") → recordatorio (fecha a futuro) → gasto/ingreso → "ya pagué X".
@@ -74,6 +83,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const r = new SR(), yo = {};
     const wd = setTimeout(() => yo.cerrar(), 20000); // seguro: nunca queda "pegada"
     const soltar = () => { clearTimeout(t); clearTimeout(wd); if (sesion === yo) { sesion = null; mic.classList.remove('on'); } };
+    yo.cancelar = () => { hecho = true; soltar(); try { r.abort(); } catch {} };
     const cerrar = yo.cerrar = () => {
       if (hecho) return; hecho = true; soltar(); try { r.abort(); } catch {}
       procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));

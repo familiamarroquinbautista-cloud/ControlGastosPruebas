@@ -83,6 +83,7 @@ export function crearRecordatorios({ db, perfil, fs: { addDoc, collection, getDo
       return `✔️ ${r.titulo} marcado como pagado${r.mensual ? '; próximo ' + cuando(siguienteMes(r.fecha, r.dia)) : ''}.`;
     },
     // Aviso al abrir la app: lo vencido y lo de hoy/mañana.
+    limpiar() { cache = null; },
     async avisoInicio() {
       const lim = iso(new Date(hoy0().getTime() + 864e5)), l = (await pendientes()).filter(r => r.fecha <= lim);
       return l.length ? '📅 ' + l.map(linea).join('; ') : null;
