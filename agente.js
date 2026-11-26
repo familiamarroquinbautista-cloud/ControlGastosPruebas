@@ -28,24 +28,30 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
   // Si una herramienta falla, se ve en pantalla y el agente recibe el error.
   const seguro = f => async a => { try { return await f(a || {}); } catch (e) { aviso('❌ No se guardó: ' + (e?.code || e?.message || e), 'error', 6000); return 'error: ' + (e?.code || e?.message); } };
 
+  // Guarda sin bloquear al agente (responde al instante) y cuelga: deja de escuchar y de consumir minutos.
+  const guardar = (col, datos, ok) => {
+    aviso('💾 Guardando…', 'info', 0);
+    addDoc(collection(db, col), datos).then(() => { aviso(ok, 'exito'); refrescar(); })
+      .catch(e => aviso('❌ No se guardó: ' + (e?.code || e?.message || e), 'error', 8000));
+    setTimeout(() => conv?.endSession(), 400);
+  };
   const fecha = () => { const d = new Date(); return { fecha: d, mes: d.getMonth() + 1, año: d.getFullYear() }; };
   const tools = Object.fromEntries(Object.entries({
     registrar_gasto: async a => {
       const monto = Math.round(+a.monto); if (!(monto > 0)) return 'error: monto inválido';
       const categoria = pick(Object.keys(cats), a.categoria, 'Otros');
       const subcategoria = pick(cats[categoria], a.subcategoria, cats[categoria][0]);
-      await addDoc(collection(db, 'gastos'), {
+      guardar('gastos', {
         usuario: perfil, categoria, subcategoria, descripcion: (a.descripcion || 'Sin descripción').slice(0, 120), monto,
         metodoPago: a.metodo === 'credito' ? 'credito' : 'debito', ...fecha(), tipoMov: 'gasto'
-      });
-      refrescar(); aviso(`✅ Gasto registrado: ${COP(monto)} en ${categoria} - ${subcategoria}`, 'exito');
+      }, `✅ Gasto registrado: ${COP(monto)} en ${categoria} - ${subcategoria}`);
       return `ok ${COP(monto)} ${categoria}/${subcategoria}`;
     },
     registrar_ingreso: async a => {
       const monto = Math.round(+a.monto); if (!(monto > 0)) return 'error: monto inválido';
       const tipoIngreso = pick(ingresos, a.tipo, 'Otros');
-      await addDoc(collection(db, 'ingresos'), { usuario: perfil, tipoIngreso, descripcion: (a.descripcion || 'Sin descripción').slice(0, 120), monto, ...fecha(), tipoMov: 'ingreso' });
-      refrescar(); aviso(`✅ Ingreso registrado: ${COP(monto)} (${tipoIngreso})`, 'exito');
+      guardar('ingresos', { usuario: perfil, tipoIngreso, descripcion: (a.descripcion || 'Sin descripción').slice(0, 120), monto, ...fecha(), tipoMov: 'ingreso' },
+        `✅ Ingreso registrado: ${COP(monto)} (${tipoIngreso})`);
       return `ok ingreso ${COP(monto)} ${tipoIngreso}`;
     },
     consultar_gastos: async a => {
