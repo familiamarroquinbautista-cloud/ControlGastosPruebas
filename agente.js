@@ -50,14 +50,13 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   const recs = crearRecordatorios({ db, perfil, fs });
   const avisarPendientes = () => recs.avisoInicio().then(m => m && aviso(m, 'info', 10000)).catch(() => {});
   avisarPendientes();
-  // Al volver a la app (iPhone/Android): refresca datos sin recargar la página.
-  // Recargar la página haría que iOS vuelva a pedir el permiso del micrófono.
+  // Al volver a la app (iPhone/Android): recarga completa de la página.
   let oculta = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { oculta = Date.now(); if (ses) { ses.descartar = true; detener(); } return; }
-    if (Date.now() - oculta < 3000) return;
-    consultas.limpiar(); recs.limpiar(); refrescar(); avisarPendientes();
+    if (Date.now() - oculta > 1000) location.reload(); // volver a la app (minimizada) = recarga completa
   });
+  window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); }); // restaurada desde caché
   const PEND = /pendiente|por pagar|recordatorio|vence|venc|proxim\w* pago|tengo que pagar|que debo/;
 
   // Orden: pregunta ("dime") → recordatorio (fecha a futuro) → gasto/ingreso → "ya pagué X".
