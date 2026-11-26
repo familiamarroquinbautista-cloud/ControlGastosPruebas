@@ -64,15 +64,17 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null;
+  let sesion = null;
   mic.onclick = () => {
     if (!SR) return aviso('Este navegador no tiene dictado. Usa Chrome, Edge o Safari.', 'error', 6000);
-    if (rec) return rec.stop();
+    // Tocar mientras escucha cierra la sesión directamente (no depende de que el navegador dispare onend).
+    if (sesion) return sesion.cerrar();
     // Cada sesión es independiente: los eventos tardíos de una sesión anterior no afectan la nueva.
     let txt = '', hecho = false, t;
-    const r = rec = new SR();
-    const soltar = () => { clearTimeout(t); if (rec === r) { rec = null; mic.classList.remove('on'); } };
-    const cerrar = () => {
+    const r = new SR(), yo = {};
+    const wd = setTimeout(() => yo.cerrar(), 20000); // seguro: nunca queda "pegada"
+    const soltar = () => { clearTimeout(t); clearTimeout(wd); if (sesion === yo) { sesion = null; mic.classList.remove('on'); } };
+    const cerrar = yo.cerrar = () => {
       if (hecho) return; hecho = true; soltar(); try { r.abort(); } catch {}
       procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
     };
@@ -87,9 +89,9 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       const p = parse(txt, cats);
       if (p.ok && p.monto >= 1000 && !TRIGGER.test(norm(txt))) t = setTimeout(cerrar, 900); // frase completa: no esperar el silencio del navegador
     };
-    r.onerror = e => { if (!hecho && !['no-speech', 'aborted'].includes(e.error)) aviso('Micrófono: ' + e.error, 'error', 5000); };
+    r.onerror = e => { if (hecho) return; if (!['no-speech', 'aborted'].includes(e.error)) { hecho = true; soltar(); return aviso('Micrófono: ' + e.error, 'error', 5000); } cerrar(); };
     r.onend = cerrar;
-    mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
+    sesion = yo; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
     const iniciar = (n = 0) => { try { r.start(); } catch { if (n < 3) setTimeout(() => iniciar(n + 1), 250); else { hecho = true; soltar(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } } };
     iniciar();
   };
