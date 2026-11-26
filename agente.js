@@ -118,7 +118,33 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
     try { r.start(); } catch { try { r = nuevo(); r.start(); } catch { s.descartar = true; s.finalizar(); r = null; libre(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } }
   }
+  // iPhone/iPad: el reconocimiento de voz web falla tras el primer uso en apps de acceso directo.
+  // Se usa el dictado del teclado de Apple (estable, sin permisos repetidos): el texto se procesa solo al dejar de hablar.
+  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const barra = document.createElement('form');
+  barra.style.cssText = 'position:fixed;left:12px;right:112px;bottom:28px;z-index:9999;display:none';
+  barra.innerHTML = '<input type="text" enterkeyhint="send" autocomplete="off" autocorrect="off" placeholder="Toca 🎤 del teclado y habla…" style="width:100%;box-sizing:border-box;padding:14px 16px;border-radius:14px;border:1px solid #9aa3ad88;font-size:16px;background:#fff;color:#1a1f3a;box-shadow:0 4px 14px #0003">';
+  document.body.append(barra);
+  const inp = barra.querySelector('input');
+  let tTec;
+  const cerrarBarra = () => { clearTimeout(tTec); inp.value = ''; inp.blur(); barra.style.display = 'none'; mic.classList.remove('on'); };
+  const enviar = () => { const v = inp.value.trim(); cerrarBarra(); if (v) procesar(v).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000)); };
+  barra.onsubmit = e => { e.preventDefault(); enviar(); };
+  inp.addEventListener('input', () => {
+    clearTimeout(tTec); const v = inp.value.trim(); if (!v) return;
+    aviso('🎧 ' + v, 'info', 0);
+    const p = parse(v, cats), listo = p.ok && p.monto >= 1000 && !TRIGGER.test(norm(v));
+    tTec = setTimeout(enviar, listo ? 1300 : 2300); // pausa al hablar = fin de la frase
+  });
+  inp.addEventListener('blur', () => setTimeout(() => { if (!inp.value.trim() && barra.style.display !== 'none') cerrarBarra(); }, 300));
+  function teclado() {
+    if (barra.style.display !== 'none') return inp.value.trim() ? enviar() : cerrarBarra();
+    barra.style.display = 'block'; mic.classList.add('on'); inp.focus(); // focus dentro del toque abre el teclado
+    aviso('Toca 🎤 en el teclado y habla', 'info', 0);
+  }
+
   mic.onclick = () => {
+    if (IOS) return teclado();
     if (!SR) return aviso('Este navegador no tiene dictado. Usa Chrome, Edge o Safari.', 'error', 6000);
     if (estado === 'listening') return detener(); // tocar mientras escucha: detener y procesar
     if ('speechSynthesis' in window) speechSynthesis.cancel(); // la voz de una respuesta ocupa el audio
