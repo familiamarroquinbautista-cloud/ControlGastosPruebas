@@ -56,8 +56,8 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const p = parse(txt, cats), t = norm(txt);
     if (p.pregunta) { const r = PEND.test(t) ? await recs.listar() : await consultas.responder(txt); aviso(r, 'info', 10000); return hablar(r); }
     const rc = parseRecordatorio(txt);
-    if (rc?.falta) return aviso('¿Para qué fecha? Ej: "recuérdame pagar la hipoteca el 27 de noviembre"', 'error', 7000);
-    if (rc) return aviso(await recs.crear(rc), 'exito', 6000);
+    if (rc?.falta && !p.ok) return aviso('¿Para qué fecha? Ej: "recuérdame pagar la hipoteca el 27 de noviembre"', 'error', 7000);
+    if (rc && !rc.falta) return aviso(await recs.crear(rc), 'exito', 6000);
     if (p.ok) { guardar(p, txt); recs.marcarSiCoincide(txt).then(m => m && setTimeout(() => aviso(m, 'exito', 5000), 2500)).catch(() => {}); return; }
     if (/\b(pague|pagado|pagada|ya se pago)\b/.test(t)) { const m = await recs.marcarSiCoincide(txt); if (m) return aviso(m, 'exito', 5000); }
     aviso(txt ? `No entendí "${txt}". Ej: "almuerzo 25 mil"` : 'No te escuché. Toca y habla.', 'error', 6000);
@@ -79,12 +79,13 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     r.lang = 'es-CO'; r.interimResults = true; r.maxAlternatives = 1;
     r.onresult = e => {
       if (hecho) return;
-      txt =[...e.results].map(r => r[0].transcript).join(' ').trim();
+      // Android a veces repite la frase acumulada en cada resultado: si un trozo contiene lo anterior, lo reemplaza.
+      txt = [...e.results].reduce((acc, x) => { const s = x[0].transcript.trim(); return norm(s).startsWith(norm(acc)) ? s : (acc + ' ' + s).trim(); }, '');
       aviso('🎧 ' + txt, 'info', 0);
       clearTimeout(t);
       if (e.results[e.results.length - 1].isFinal) return cerrar();
       const p = parse(txt, cats);
-      if (p.ok && !TRIGGER.test(norm(txt))) t = setTimeout(cerrar, 800); // frase completa: no esperar el silencio del navegador
+      if (p.ok && p.monto >= 1000 && !TRIGGER.test(norm(txt))) t = setTimeout(cerrar, 900); // frase completa: no esperar el silencio del navegador
     };
     r.onerror = e => { if (!hecho && !['no-speech', 'aborted'].includes(e.error)) aviso('Micrófono: ' + e.error, 'error', 5000); };
     r.onend = cerrar;

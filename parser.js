@@ -3,7 +3,7 @@ export const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[Ì€-Í
 const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
 const SYN = [
-  ['Transporte', 'Gasolina', 'gasolina|tanque\\w*|combustible|acpm'],
+  ['Transporte', 'Gasolina', 'gasolina|tanque\\w*|combustible|acpm|primax|terpel|texaco|biomax|esso|mobil|zeuss|petrobras'],
   ['Transporte', 'Apps', 'uber|didi|cabify|taxi|indrive\\w*|picap'],
   ['Transporte', 'Transporte Publico', 'transmilenio|sitp|bus|buseta|metro|pasajes?|tullave|transporte publico'],
   ['Transporte', 'Mantenimientos', 'mantenimientos?|taller|cambio de aceite|llantas?|lavada del carro|soat|tecnomecanica'],
@@ -112,6 +112,6 @@ export function parse(raw, cats) {
     metodo: /\b(credito|con (?:la )?tarjeta|tc)\b/.test(t) ? 'credito' : 'debito',
     dias: /\b(antier|anteayer|ante ayer)\b/.test(t) ? 2 : /\bayer\b/.test(t) ? 1 : 0,
     desc: detalle(raw, cats, !!ing),
-    ok: m > 0 && !!(ing || cs)
+    ok: m >= 100 && !!(ing || cs) // < $100 no es un monto real en COP (dictado incompleto)
   };
 }

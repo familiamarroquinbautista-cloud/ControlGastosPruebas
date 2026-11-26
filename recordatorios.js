@@ -11,7 +11,7 @@ const hoy0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const diaDelMes = (a, m, d) => new Date(a, m, Math.min(d, new Date(a, m + 1, 0).getDate())); // 31 → último día
 const siguienteMes = (s, dia) => { const d = deIso(s); return iso(diaDelMes(d.getFullYear(), d.getMonth() + 1, dia || d.getDate())); };
 
-export const TRIGGER = /\b(recuerda\w*|recordar|recordatorio|vence|vencimiento|fecha limite|limite de pago|hay que pagar|tengo que pagar|toca pagar|recibo)\b/;
+export const TRIGGER = /\b(recuerda\w*|recordar|recordatorio|vence|vencimiento|fecha limite|limite de pago|hay que pagar|tengo que pagar|toca pagar|pagar|recibo)\b/;
 const FECHA = new RegExp(`\\b(?:el |dia )?(\\d{1,2}|primero) de (${MESES.join('|')})(?: de (\\d{4}))?\\b`);
 const MENSUAL = /\b(cada mes|todos los meses|mensual\w*)\b/;
 
@@ -21,7 +21,9 @@ export function parseRecordatorio(raw, now = new Date()) {
   if (!TRIGGER.test(t)) return null;
   const h = new Date(now); h.setHours(0, 0, 0, 0);
   let fecha, quitar;
-  const m = t.match(FECHA), mens = MENSUAL.test(t) || /\bcada \d/.test(t);
+  // Por defecto se repite cada mes (hasta decir "ya pagué"); "solo una vez" lo hace único.
+  const UNA = /\b(solo una|una sola|unica|por una) vez\b/, mens = !UNA.test(t); t = t.replace(UNA, ' ');
+  const m = t.match(FECHA);
   if (m) {
     const dia = m[1] === 'primero' ? 1 : +m[1], mes = MESES.indexOf(m[2]);
     let a = m[3] ? +m[3] : h.getFullYear(); let d = diaDelMes(a, mes, dia);
