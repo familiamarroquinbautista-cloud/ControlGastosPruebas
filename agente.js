@@ -1,8 +1,9 @@
 // Registro por voz: dictado del navegador + intérprete local. Sin servicios pagos ($0).
 import { parse } from './parser.js';
+import { crearConsultas } from './consultas.js';
 
 export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) {
-  const { addDoc, collection, getDocs, query, where } = fs;
+  const { addDoc, collection } = fs;
   const COP = v => '$' + Math.round(v || 0).toLocaleString('es-CO');
 
   // Orbe: capa base + núcleo recortado que se mueve; al escuchar crece y cicla colores.
@@ -40,16 +41,10 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const datos = ing ? { ...base, tipoIngreso: p.subcategoria, tipoMov: 'ingreso' }
       : { ...base, categoria: p.categoria, subcategoria: p.subcategoria, metodoPago: p.metodo, tipoMov: 'gasto' };
     aviso(`✅ ${ing ? 'Ingreso' : 'Gasto'} registrado: ${COP(p.monto)} · ${ing ? p.subcategoria : p.categoria + ' - ' + p.subcategoria}`);
-    addDoc(collection(db, ing ? 'ingresos' : 'gastos'), datos).then(refrescar)
+    addDoc(collection(db, ing ? 'ingresos' : 'gastos'), datos).then(() => { consultas.limpiar(); refrescar(); })
       .catch(e => { aviso('❌ No se guardó: ' + (e?.code || e?.message), 'error', 8000); mostrarMensaje('No se guardó el registro', 'error'); });
   }
-  async function consultar(categoria) {
-    const d = new Date(), s = await getDocs(query(collection(db, 'gastos'), where('usuario', '==', perfil), where('año', '==', d.getFullYear()), where('mes', '==', d.getMonth() + 1)));
-    const por = {}; let tot = 0;
-    s.forEach(x => { const g = x.data(); tot += g.monto; por[g.categoria] = (por[g.categoria] || 0) + g.monto; });
-    if (categoria) return `${categoria} este mes: ${COP(por[categoria])} de ${COP(tot)}`;
-    return `Gastos del mes ${COP(tot)}. Mayores: ${Object.entries(por).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, v]) => c + ' ' + COP(v)).join(', ') || 'ninguno'}`;
-  }
+  const consultas = crearConsultas({ db, perfil, cats, fs });
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null;
@@ -60,7 +55,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const cerrar = () => {
       if (hecho) return; hecho = true; rec?.abort();
       const p = parse(txt, cats);
-      if (p.pregunta) return consultar(p.categoria).then(r => { aviso(r, 'info', 9000); hablar(r); }).catch(e => aviso('❌ ' + e.code, 'error'));
+      if (p.pregunta) return consultas.responder(txt).then(r => { aviso(r, 'info', 9000); hablar(r); }).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error'));
       if (p.ok) return guardar(p, txt);
       aviso(txt ? `No entendí "${txt}". Ej: "almuerzo 25 mil"` : 'No te escuché. Toca y habla.', 'error', 6000);
     };

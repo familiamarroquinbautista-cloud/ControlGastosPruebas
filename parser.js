@@ -35,9 +35,9 @@ const SYN = [
   ['Regalos', 'Regalos', 'regalos?|cumpleanos|detalle']
 ].map(([c, s, r]) => [c, s, new RegExp(`\\b(?:${r})\\b`)]);
 
-function categoria(t, cats) {
+export function categoria(t, cats) {
   for (const [c, s, r] of SYN) if (cats[c]?.includes(s) && r.test(t)) return [c, s];
-  for (const c in cats) if (t.includes(norm(c))) return [c, cats[c].includes('Otros') ? 'Otros' : cats[c][0]];
+  for (const c in cats) if (t.includes(norm(c))) return [c, cats[c].includes('Otros') ? 'Otros' : cats[c][0], true]; // true = categoría completa
   return null;
 }
 
@@ -71,7 +71,7 @@ export function monto(t) {
 const ING = [['Nomina', 'nomina|sueldo|salario|quincena'], ['Prima', 'prima'], ['Prestamo', 'prestamo|me prestaron'], ['Subsidio', 'subsidio'],
   ['Otros', 'ingreso|me pagaron|recibi|me consignaron|me entro|me transfirieron|gane|vendi']].map(([s, r]) => [s, new RegExp(`\\b(?:${r})\\b`)]);
 const SPEND = /\b(pague|gaste|gastamos|compre|compramos|pago|tanquee)\b/;
-const PREGUNTA = /^(cuanto|cuantos|cuanta|que|cual|cuales|como|dime|muestrame|dame|resumen)\b/;
+const PREGUNTA = /^(cuanto|cuantos|cuanta|que|cual|cuales|como|muestrame|dame|resumen|en que)\b|\bdime\b/;
 
 /** → {pregunta:true} | {tipo:'gasto'|'ingreso', categoria, subcategoria, monto, metodo, dias, ok} */
 export function parse(raw, cats) {
@@ -79,7 +79,9 @@ export function parse(raw, cats) {
   const cs = categoria(t, cats);
   if (PREGUNTA.test(t) || raw.includes('?')) return { pregunta: true, categoria: cs?.[0] };
   const m = monto(t);
-  const ing = !SPEND.test(t) && !cs && ING.find(([, r]) => r.test(t));
+  // "ingreso" manda: siempre es ingreso. Con categoría (y sin "ingreso") es gasto.
+  const ing = /\bingres/.test(t) ? (ING.slice(0, 4).find(([, r]) => r.test(t)) || ['Otros'])
+    : !SPEND.test(t) && !cs && ING.find(([, r]) => r.test(t));
   return {
     tipo: ing ? 'ingreso' : 'gasto', categoria: ing ? null : cs?.[0], subcategoria: ing ? ing[0] : cs?.[1], monto: m,
     metodo: /\b(credito|con (?:la )?tarjeta|tc)\b/.test(t) ? 'credito' : 'debito',
