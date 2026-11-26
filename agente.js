@@ -5,10 +5,25 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   const { addDoc, collection, getDocs, query, where } = fs;
   const COP = v => '$' + Math.round(v || 0).toLocaleString('es-CO');
 
-  const mic = Object.assign(document.createElement('button'), { textContent: '🎙️', title: 'Dictar gasto' });
-  mic.style.cssText = 'position:fixed;right:18px;bottom:18px;width:68px;height:68px;border-radius:50%;border:0;font-size:30px;box-shadow:0 4px 14px #0004;cursor:pointer;z-index:9999;background:#3fb68b;touch-action:manipulation';
+  // Orbe: capa base + núcleo recortado que se mueve; al escuchar crece y cicla colores.
+  document.head.insertAdjacentHTML('beforeend', `<style>
+    .orb{position:fixed;right:14px;bottom:14px;width:84px;height:84px;padding:0;border:0;background:none;cursor:pointer;z-index:9999;
+      touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .35s cubic-bezier(.34,1.56,.64,1);filter:drop-shadow(0 6px 12px #1a1f3a55)}
+    .orb img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none}
+    .orb .nucleo{clip-path:circle(36% at 50% 50%);transform-origin:50% 50%}
+    .orb:active{transform:scale(.94)}
+    .orb.on{transform:scale(1.18);animation:brillo 2s linear infinite}
+    .orb.on img{animation:tono 2s linear infinite}
+    .orb.on .nucleo{animation:tono 2s linear infinite reverse,mover 2.6s ease-in-out infinite}
+    @keyframes tono{from{filter:hue-rotate(0deg) saturate(1.5) brightness(1.1)}to{filter:hue-rotate(360deg) saturate(1.5) brightness(1.1)}}
+    @keyframes mover{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(14deg) scale(1.05)}50%{transform:rotate(-8deg) scale(.96)}75%{transform:rotate(10deg) scale(1.04)}}
+    @keyframes brillo{0%{filter:drop-shadow(0 0 10px #4fe3ff)}33%{filter:drop-shadow(0 0 16px #3cff6e)}66%{filter:drop-shadow(0 0 16px #ff6fb5)}100%{filter:drop-shadow(0 0 10px #4fe3ff)}}
+    @media (prefers-reduced-motion:reduce){.orb.on img,.orb.on .nucleo{animation-duration:6s}}
+  </style>`);
+  const mic = Object.assign(document.createElement('button'), { className: 'orb', title: 'Dictar gasto', ariaLabel: 'Dictar gasto' });
+  mic.innerHTML = '<img src="img/orb.png" alt=""><img class="nucleo" src="img/orb.png" alt="">';
   const tst = document.createElement('div');
-  tst.style.cssText = 'position:fixed;right:18px;bottom:96px;max-width:80vw;padding:10px 14px;border-radius:10px;color:#fff;font:600 15px system-ui;box-shadow:0 4px 14px #0004;z-index:9999;display:none';
+  tst.style.cssText = 'position:fixed;right:18px;bottom:112px;max-width:80vw;padding:10px 14px;border-radius:10px;color:#fff;font:600 15px system-ui;box-shadow:0 4px 14px #0004;z-index:9999;display:none';
   document.body.append(mic, tst);
   const aviso = (t, tipo = 'exito', ms = 4000) => {
     tst.textContent = t; tst.style.background = tipo === 'error' ? '#b3261e' : tipo === 'info' ? '#33475b' : '#1f7a55';
@@ -59,7 +74,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       if (p.ok) t = setTimeout(cerrar, 800); // frase completa: no esperar el silencio del navegador
     };
     rec.onerror = e => { if (!['no-speech', 'aborted'].includes(e.error)) aviso('Micrófono: ' + e.error, 'error', 5000); };
-    rec.onend = () => { clearTimeout(t); rec = null; mic.style.background = '#3fb68b'; cerrar(); };
-    mic.style.background = '#e5534b'; aviso('🎧 Te escucho…', 'info', 0); rec.start();
+    rec.onend = () => { clearTimeout(t); rec = null; mic.classList.remove('on'); cerrar(); };
+    mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0); rec.start();
   };
 }
