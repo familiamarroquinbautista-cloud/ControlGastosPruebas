@@ -2,12 +2,15 @@
 // Se usa en iPhone, donde el reconocimiento de voz del navegador solo funciona una vez por apertura.
 const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 let asrP = null;
+const OPC = { language: 'spanish', task: 'transcribe', max_new_tokens: 48 }; // frases cortas: decodificación acotada
 
 // whisper-base cuantizado (76 MB, una sola descarga; luego queda en caché). Probado: "Gasolina 30.000 en primax." exacto.
 export function cargarModelo(progreso) {
-  return asrP ??= import(TJS).then(({ pipeline, env }) => {
+  return asrP ??= import(TJS).then(async ({ pipeline, env }) => {
     env.allowLocalModels = false;
-    return pipeline('automatic-speech-recognition', 'onnx-community/whisper-base', { device: 'wasm', dtype: 'q8', progress_callback: progreso });
+    const asr = await pipeline('automatic-speech-recognition', 'onnx-community/whisper-base', { device: 'wasm', dtype: 'q8', progress_callback: progreso });
+    await asr(new Float32Array(16000), OPC).catch(() => {}); // calentamiento: la 1.ª inferencia es la lenta
+    return asr;
   }).catch(e => { asrP = null; throw e; });
 }
 
@@ -39,7 +42,7 @@ export function crearGrabadora({ alEstado, alTexto, alError }) {
       let s = 0; for (let i = 0; i < d.length; i++) s += d[i] * d[i];
       const rms = Math.sqrt(s / d.length), ahora = performance.now();
       if (rms > 0.02) { habla = true; ultimaVoz = ahora; }
-      if (habla && ahora - ultimaVoz > 1100) detener();          // 1,1 s de silencio tras hablar = fin
+      if (habla && ahora - ultimaVoz > 700) detener();           // 0,7 s de silencio tras hablar = fin
       else if (!habla && ahora - t0 > 6000) detener(true);       // no habló
       else if (ahora - t0 > 15000) detener();                    // máximo 15 s
     };
@@ -56,7 +59,7 @@ export function crearGrabadora({ alEstado, alTexto, alError }) {
     ocupado = true; alEstado('procesando');
     try {
       const asr = await cargarModelo();
-      const { text } = await asr(a16k(buf, ctx.sampleRate), { language: 'spanish', task: 'transcribe' });
+      const { text } = await asr(a16k(buf, ctx.sampleRate), OPC);
       alTexto(ALUCINA.test(text) ? '' : text.trim());
     } catch (e) { alError(e); }
     finally { ocupado = false; alEstado('listo'); }

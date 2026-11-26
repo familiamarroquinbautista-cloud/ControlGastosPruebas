@@ -143,7 +143,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     grab = crearGrabadora({
       alEstado: e => {
         mic.classList.toggle('on', e === 'escuchando');
-        if (e === 'escuchando') aviso('🎧 Te escucho… (v16)', 'info', 0);
+        if (e === 'escuchando') aviso('🎧 Te escucho… (v17)', 'info', 0);
         if (e === 'procesando') aviso('⏳ Procesando…', 'info', 0);
       },
       alTexto: txt => { if (txt) aviso('🎧 ' + txt, 'info', 0); procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000)); },
