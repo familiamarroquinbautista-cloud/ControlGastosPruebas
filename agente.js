@@ -28,13 +28,26 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   const tst = document.createElement('div');
   tst.style.cssText = 'position:fixed;right:18px;bottom:112px;max-width:80vw;padding:10px 14px;border-radius:10px;color:#fff;font:600 15px system-ui;box-shadow:0 4px 14px #0004;z-index:9999;display:none';
   document.body.append(mic, tst);
+  let ultimo = null;
   const aviso = (t, tipo = 'exito', ms = 4000) => {
+    if (ms) ultimo = [t, tipo, Math.max(ms, 5000)];
     tst.textContent = t; tst.style.background = tipo === 'error' ? '#b3261e' : tipo === 'info' ? '#33475b' : '#1f7a55';
     tst.style.display = 'block'; if (tipo === 'exito') navigator.vibrate?.(120);
     clearTimeout(aviso.h); if (ms) aviso.h = setTimeout(() => (tst.style.display = 'none'), ms);
   };
-  const hablar = t => { if (!('speechSynthesis' in window)) return; speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(t.replace(/\$([\d.]+)/g, '$1 pesos')); u.lang = 'es-CO'; speechSynthesis.speak(u); };
+  // Habla y resuelve al terminar (máx. 15 s).
+  const hablar = t => new Promise(ok => {
+    if (!('speechSynthesis' in window)) return ok(); speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t.replace(/\$([\d.]+)/g, '$1 pesos')); u.lang = 'es-CO';
+    u.onend = u.onerror = ok; setTimeout(ok, 15000); speechSynthesis.speak(u);
+  });
+
+  // iPhone: en apps de acceso directo la voz web solo funciona la 1.ª vez por carga de página.
+  // Tras cada uso la página se recarga sola (≈1 s) y muestra la confirmación; así cada toque vuelve a ser "la primera vez".
+  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const recargar = () => { if (ultimo) sessionStorage.setItem('avisoVoz', JSON.stringify(ultimo)); setTimeout(() => location.reload(), 300); };
+  const previo = sessionStorage.getItem('avisoVoz');
+  if (previo) { sessionStorage.removeItem('avisoVoz'); aviso(...JSON.parse(previo)); }
 
   const fecha = dias => { const d = new Date(); d.setDate(d.getDate() - dias); return { fecha: d, mes: d.getMonth() + 1, año: d.getFullYear() }; };
   // Confirmación optimista: aviso inmediato, la escritura sigue en segundo plano.
@@ -43,13 +56,13 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const datos = ing ? { ...base, tipoIngreso: p.subcategoria, tipoMov: 'ingreso' }
       : { ...base, categoria: p.categoria, subcategoria: p.subcategoria, metodoPago: p.metodo, tipoMov: 'gasto' };
     aviso(`✅ ${ing ? 'Ingreso' : 'Gasto'} registrado: ${COP(p.monto)} · ${ing ? p.subcategoria : p.categoria + ' - ' + p.subcategoria}`);
-    addDoc(collection(db, ing ? 'ingresos' : 'gastos'), datos).then(() => { consultas.limpiar(); refrescar(); })
+    return addDoc(collection(db, ing ? 'ingresos' : 'gastos'), datos).then(() => { consultas.limpiar(); refrescar(); })
       .catch(e => { aviso('❌ No se guardó: ' + (e?.code || e?.message), 'error', 8000); mostrarMensaje('No se guardó el registro', 'error'); });
   }
   const consultas = crearConsultas({ db, perfil, cats, fs });
   const recs = crearRecordatorios({ db, perfil, fs });
   const avisarPendientes = () => recs.avisoInicio().then(m => m && aviso(m, 'info', 10000)).catch(() => {});
-  avisarPendientes();
+  if (!previo) avisarPendientes();
   // Al volver a la app (iPhone/Android): recarga completa de la página.
   let oculta = 0;
   document.addEventListener('visibilitychange', () => {
@@ -66,7 +79,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const rc = parseRecordatorio(txt);
     if (rc?.falta && !p.ok) return aviso('¿Para qué fecha? Ej: "recuérdame pagar la hipoteca el 27 de noviembre"', 'error', 7000);
     if (rc && !rc.falta) return aviso(await recs.crear(rc), 'exito', 6000);
-    if (p.ok) { guardar(p, txt); recs.marcarSiCoincide(txt).then(m => m && setTimeout(() => aviso(m, 'exito', 5000), 2500)).catch(() => {}); return; }
+    if (p.ok) { const [, m] = await Promise.all([guardar(p, txt), recs.marcarSiCoincide(txt).catch(() => null)]); if (m) aviso(m, 'exito', 5000); return; }
     if (/\b(pague|pagado|pagada|ya se pago)\b/.test(t)) { const m = await recs.marcarSiCoincide(txt); if (m) return aviso(m, 'exito', 5000); }
     aviso(txt ? `No entendí "${txt}". Ej: "almuerzo 25 mil"` : 'No te escuché. Toca y habla.', 'error', 6000);
   }
@@ -97,7 +110,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const s = ses = { txt: '', hecho: false, oye: false };
     s.finalizar = () => {
       if (s.hecho) return; s.hecho = true; clearTimeout(s.t); clearTimeout(s.wd); clearTimeout(s.wa);
-      if (!s.descartar) procesar(s.txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
+      if (!s.descartar) procesar(s.txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000)).finally(() => IOS && recargar());
     };
     s.resultado = e => {
       if (s.hecho) return; s.oye = true;
@@ -113,38 +126,13 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     s.wa = setTimeout(() => {
       if (s.oye || s.hecho || ses !== s) return;
       s.descartar = true; s.finalizar(); try { r.abort(); } catch {} r = null; libre();
+      if (IOS) { aviso('Micrófono reiniciado. Toca y habla.', 'info', 5000); return recargar(); }
       if (!esReintento) empezar(true); else aviso('El micrófono no responde. Toca de nuevo.', 'error', 5000);
     }, 4000);
     estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
     try { r.start(); } catch { try { r = nuevo(); r.start(); } catch { s.descartar = true; s.finalizar(); r = null; libre(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } }
   }
-  // iPhone/iPad: el reconocimiento de voz web falla tras el primer uso en apps de acceso directo.
-  // Se usa el dictado del teclado de Apple (estable, sin permisos repetidos): el texto se procesa solo al dejar de hablar.
-  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const barra = document.createElement('form');
-  barra.style.cssText = 'position:fixed;left:12px;right:112px;bottom:28px;z-index:9999;display:none';
-  barra.innerHTML = '<input type="text" enterkeyhint="send" autocomplete="off" autocorrect="off" placeholder="Toca 🎤 del teclado y habla…" style="width:100%;box-sizing:border-box;padding:14px 16px;border-radius:14px;border:1px solid #9aa3ad88;font-size:16px;background:#fff;color:#1a1f3a;box-shadow:0 4px 14px #0003">';
-  document.body.append(barra);
-  const inp = barra.querySelector('input');
-  let tTec;
-  const cerrarBarra = () => { clearTimeout(tTec); inp.value = ''; inp.blur(); barra.style.display = 'none'; mic.classList.remove('on'); };
-  const enviar = () => { const v = inp.value.trim(); cerrarBarra(); if (v) procesar(v).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000)); };
-  barra.onsubmit = e => { e.preventDefault(); enviar(); };
-  inp.addEventListener('input', () => {
-    clearTimeout(tTec); const v = inp.value.trim(); if (!v) return;
-    aviso('🎧 ' + v, 'info', 0);
-    const p = parse(v, cats), listo = p.ok && p.monto >= 1000 && !TRIGGER.test(norm(v));
-    tTec = setTimeout(enviar, listo ? 1300 : 2300); // pausa al hablar = fin de la frase
-  });
-  inp.addEventListener('blur', () => setTimeout(() => { if (!inp.value.trim() && barra.style.display !== 'none') cerrarBarra(); }, 300));
-  function teclado() {
-    if (barra.style.display !== 'none') return inp.value.trim() ? enviar() : cerrarBarra();
-    barra.style.display = 'block'; mic.classList.add('on'); inp.focus(); // focus dentro del toque abre el teclado
-    aviso('Toca 🎤 en el teclado y habla', 'info', 0);
-  }
-
   mic.onclick = () => {
-    if (IOS) return teclado();
     if (!SR) return aviso('Este navegador no tiene dictado. Usa Chrome, Edge o Safari.', 'error', 6000);
     if (estado === 'listening') return detener(); // tocar mientras escucha: detener y procesar
     if ('speechSynthesis' in window) speechSynthesis.cancel(); // la voz de una respuesta ocupa el audio
