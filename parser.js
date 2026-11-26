@@ -35,10 +35,18 @@ const SYN = [
   ['Regalos', 'Regalos', 'regalos?|cumpleanos|detalle']
 ].map(([c, s, r]) => [c, s, new RegExp(`\\b(?:${r})\\b`)]);
 
+const nombreRe = s => { const n = norm(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return new RegExp(`\\b${n.length > 3 ? n.replace(/s$/, '') + 's?' : n}\\b`); };
+// → [categoria, subcategoria, esCategoriaCompleta, posición]. Gana lo dicho primero; a igual posición, la coincidencia más larga.
 export function categoria(t, cats) {
-  for (const [c, s, r] of SYN) if (cats[c]?.includes(s) && r.test(t)) return [c, s];
-  for (const c in cats) if (t.includes(norm(c))) return [c, cats[c].includes('Otros') ? 'Otros' : cats[c][0], true]; // true = categoría completa
-  return null;
+  const cand = [];
+  const prueba = (re, c, s, entera) => { const m = re.exec(t); if (m) cand.push([c, s, entera, m.index, m[0].length]); };
+  for (const [c, s, r] of SYN) if (cats[c]?.includes(s)) prueba(r, c, s, false);
+  for (const c in cats) {
+    for (const s of cats[c]) if (!['otros', 'unas'].includes(norm(s))) prueba(nombreRe(s), c, s, false);
+    prueba(nombreRe(c), c, 'Otros', true);
+  }
+  cand.sort((a, b) => a[3] - b[3] || b[4] - a[4] || a[2] - b[2]);
+  return cand[0]?.slice(0, 4) || null;
 }
 
 const W = Object.fromEntries(('un:1 uno:1 una:1 dos:2 tres:3 cuatro:4 cinco:5 seis:6 siete:7 ocho:8 nueve:9 diez:10 once:11 doce:12 trece:13 catorce:14 quince:15 dieciseis:16 diecisiete:17 dieciocho:18 diecinueve:19 veinte:20 veintiun:21 veintiuno:21 veintidos:22 veintitres:23 veinticuatro:24 veinticinco:25 veintiseis:26 veintisiete:27 veintiocho:28 veintinueve:29 treinta:30 cuarenta:40 cincuenta:50 sesenta:60 setenta:70 ochenta:80 noventa:90 cien:100 ciento:100 doscientos:200 trescientos:300 cuatrocientos:400 quinientos:500 seiscientos:600 setecientos:700 ochocientos:800 novecientos:900')
@@ -79,8 +87,8 @@ export function parse(raw, cats) {
   const cs = categoria(t, cats);
   if (PREGUNTA.test(t) || raw.includes('?')) return { pregunta: true, categoria: cs?.[0] };
   const m = monto(t);
-  // "ingreso" manda: siempre es ingreso. Con categoría (y sin "ingreso") es gasto.
-  const ing = /\bingres/.test(t) ? (ING.slice(0, 4).find(([, r]) => r.test(t)) || ['Otros'])
+  // Empieza con categoría/subcategoría → gasto. "ingreso" → ingreso. Con categoría (sin "ingreso") → gasto.
+  const ing = cs && cs[3] === 0 ? null : /\bingres/.test(t) ?(ING.slice(0, 4).find(([, r]) => r.test(t)) || ['Otros'])
     : !SPEND.test(t) && !cs && ING.find(([, r]) => r.test(t));
   return {
     tipo: ing ? 'ingreso' : 'gasto', categoria: ing ? null : cs?.[0], subcategoria: ing ? ing[0] : cs?.[1], monto: m,
