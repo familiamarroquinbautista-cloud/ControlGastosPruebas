@@ -129,7 +129,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       if (IOS) { aviso('Micrófono reiniciado. Toca y habla.', 'info', 5000); return recargar(); }
       if (!esReintento) empezar(true); else aviso('El micrófono no responde. Toca de nuevo.', 'error', 5000);
     }, 4000);
-    estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
+    estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho… (v15)', 'info', 0);
     try { r.start(); } catch { try { r = nuevo(); r.start(); } catch { s.descartar = true; s.finalizar(); r = null; libre(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } }
   }
   mic.onclick = () => {
