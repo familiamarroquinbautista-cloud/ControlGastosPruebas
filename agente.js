@@ -16,13 +16,19 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
   const tst = document.createElement('div');
   tst.style.cssText = 'position:fixed;right:18px;bottom:92px;max-width:80vw;padding:10px 14px;border-radius:10px;background:#1f7a55;color:#fff;font:600 15px system-ui;box-shadow:0 4px 14px #0004;z-index:9999;display:none';
   document.body.appendChild(tst);
-  const aviso = (t, tipo = 'exito') => {
-    mostrarMensaje(t, tipo); tst.textContent = t; tst.style.display = 'block';
-    navigator.vibrate?.(120); clearTimeout(aviso.h); aviso.h = setTimeout(() => (tst.style.display = 'none'), 4000);
+  const aviso = (t, tipo = 'exito', ms = 4000) => {
+    if (tipo !== 'info') mostrarMensaje(t, tipo);
+    tst.textContent = t; tst.style.background = tipo === 'error' ? '#b3261e' : tipo === 'info' ? '#33475b' : '#1f7a55';
+    tst.style.display = 'block'; if (tipo === 'exito') navigator.vibrate?.(120);
+    clearTimeout(aviso.h); if (ms) aviso.h = setTimeout(() => (tst.style.display = 'none'), ms);
   };
+  // Precarga del SDK (solo descarga, sin costo): el toque del usuario no se pierde esperando red (iOS/Android).
+  const sdk = import('https://esm.sh/@elevenlabs/client');
+  // Si una herramienta falla, se ve en pantalla y el agente recibe el error.
+  const seguro = f => async a => { try { return await f(a || {}); } catch (e) { aviso('❌ No se guardó: ' + (e?.code || e?.message || e), 'error', 6000); return 'error: ' + (e?.code || e?.message); } };
 
   const fecha = () => { const d = new Date(); return { fecha: d, mes: d.getMonth() + 1, año: d.getFullYear() }; };
-  const tools = {
+  const tools = Object.fromEntries(Object.entries({
     registrar_gasto: async a => {
       const monto = Math.round(+a.monto); if (!(monto > 0)) return 'error: monto inválido';
       const categoria = pick(Object.keys(cats), a.categoria, 'Otros');
@@ -50,11 +56,11 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
       const top = Object.entries(por).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([c, v]) => `${c} ${COP(v)}`).join(', ');
       return `Total gastos del mes ${COP(tot)}. Mayores: ${top || 'ninguno'}`;
     }
-  };
+  }).map(([k, f]) => [k, seguro(f)]));
 
   let conv = null, t0 = 0, timer;
   const fin = () => {
-    clearTimeout(timer); btn.style.background = '#3fb68b'; conv = null;
+    clearTimeout(timer); btn.style.background = '#3fb68b'; conv = null; if (tst.textContent.startsWith('🎧') || tst.textContent.startsWith('🗣️') || tst.textContent.startsWith('⏳')) tst.style.display = 'none';
     if (t0) localStorage.setItem('agente_' + hoy(), uso() + Math.ceil((Date.now() - t0) / 1000));
     t0 = 0;
   };
@@ -62,20 +68,21 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
   btn.onclick = async () => {
     if (conv) return conv.endSession();
     const libre = SEG_DIA - uso();
-    if (libre <= 0) return mostrarMensaje('Límite diario del agente alcanzado', 'error');
+    if (libre <= 0) return aviso('Límite diario del agente alcanzado', 'error');
     btn.disabled = true;
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { Conversation } = await import('https://esm.sh/@elevenlabs/client');
+      aviso('⏳ Conectando…', 'info', 0);
+      const { Conversation } = await sdk;
       conv = await Conversation.startSession({
         agentId: AGENT_ID, connectionType: 'websocket',
         dynamicVariables: { usuario: perfil, hoy: hoy(), categorias: Object.entries(cats).map(([c, s]) => c + ':' + s.join(',')).join(';') },
         clientTools: tools, onDisconnect: fin,
-        onError: e => mostrarMensaje('Agente: ' + (e?.message || e), 'error')
+        onModeChange: ({ mode }) => aviso(mode === 'speaking' ? '🗣️ Hablando…' : '🎧 Te escucho…', 'info', 0),
+        onError: e => aviso('Agente: ' + (e?.message || e), 'error', 6000)
       });
       t0 = Date.now(); btn.style.background = '#e5534b';
       timer = setTimeout(() => conv?.endSession(), Math.min(SEG_SESION, libre) * 1000);
-    } catch (e) { mostrarMensaje('No se pudo iniciar el agente: ' + (e?.message || e), 'error'); fin(); }
+    } catch (e) { fin(); aviso('No se pudo iniciar el agente: ' + (e?.message || e), 'error', 8000); }
     btn.disabled = false;
   };
 }
