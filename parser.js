@@ -79,7 +79,7 @@ export function monto(t) {
 const ING = [['Nomina', 'nomina|sueldo|salario|quincena'], ['Prima', 'prima'], ['Prestamo', 'prestamo|me prestaron'], ['Subsidio', 'subsidio'],
   ['Otros', 'ingreso|me pagaron|recibi|me consignaron|me entro|me transfirieron|gane|vendi']].map(([s, r]) => [s, new RegExp(`\\b(?:${r})\\b`)]);
 const SPEND = /\b(pague|gaste|gastamos|compre|compramos|pago|tanquee)\b/;
-const PREGUNTA = /^(cuanto|cuantos|cuanta|que|cual|cuales|como|muestrame|dame|resumen|en que)\b|\bdime\b/;
+const PREGUNTA = /^(cuanto|cuantos|cuanta|que|cual|cuales|como|muestrame|dame|resumen|en que|dimelo|decime)\b|\b(dime|dimelo|decime)\b/;
 
 // Detalle/observación: lo que queda tras quitar categoría, monto, método, día y conectores.
 // "almuerzo 250.000 en Carulla" → "Carulla".

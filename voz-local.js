@@ -35,14 +35,14 @@ export function crearGrabadora({ alEstado, alTexto, alError }) {
     src = ctx.createMediaStreamSource(stream);
     proc = ctx.createScriptProcessor(4096, 1, 1);
     chunks = []; activo = true; alEstado('escuchando');
-    const t0 = performance.now(); let habla = false, ultimaVoz = 0;
+    const t0 = performance.now(); let habla = false, ultimaVoz = 0, voz = 0; // voz = ms acumulados hablando
     proc.onaudioprocess = e => {
       if (!activo) return;
       const d = e.inputBuffer.getChannelData(0); chunks.push(new Float32Array(d));
       let s = 0; for (let i = 0; i < d.length; i++) s += d[i] * d[i];
       const rms = Math.sqrt(s / d.length), ahora = performance.now();
-      if (rms > 0.02) { habla = true; ultimaVoz = ahora; }
-      if (habla && ahora - ultimaVoz > 700) detener();           // 0,7 s de silencio tras hablar = fin
+      if (rms > 0.02) { if (habla) voz += ahora - ultimaVoz < 300 ? ahora - ultimaVoz : 0; habla = true; ultimaVoz = ahora; }
+      if (habla && ahora - ultimaVoz > (voz < 1200 ? 1700 : 750)) detener(); // frase corta ("dime…"): espera más; si no, 0,75 s
       else if (!habla && ahora - t0 > 6000) detener(true);       // no habló
       else if (ahora - t0 > 15000) detener();                    // máximo 15 s
     };
