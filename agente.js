@@ -11,15 +11,16 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     .orb{position:fixed;right:14px;bottom:14px;width:84px;height:84px;padding:0;border:0;background:none;cursor:pointer;z-index:9999;
       touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .35s cubic-bezier(.34,1.56,.64,1);filter:drop-shadow(0 6px 12px #1a1f3a55)}
     .orb img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none}
-    .orb .nucleo{clip-path:circle(36% at 50% 50%);transform-origin:50% 50%}
+    .orb .nucleo{clip-path:circle(37% at 50% 50%);transform-origin:50% 50%}
+    .orb::before{content:'';position:absolute;inset:8%;border-radius:50%;opacity:0;transition:opacity .3s}
     .orb:active{transform:scale(.94)}
-    .orb.on{transform:scale(1.18);animation:brillo 2s linear infinite}
-    .orb.on img{animation:tono 2s linear infinite}
-    .orb.on .nucleo{animation:tono 2s linear infinite reverse,mover 2.6s ease-in-out infinite}
+    .orb.on{transform:scale(1.18)}
+    .orb.on::before{opacity:1;animation:halo 1.6s ease-in-out infinite}
+    .orb.on .nucleo{animation:tono 2s linear infinite,mover 2.6s ease-in-out infinite}
     @keyframes tono{from{filter:hue-rotate(0deg) saturate(1.5) brightness(1.1)}to{filter:hue-rotate(360deg) saturate(1.5) brightness(1.1)}}
     @keyframes mover{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(14deg) scale(1.05)}50%{transform:rotate(-8deg) scale(.96)}75%{transform:rotate(10deg) scale(1.04)}}
-    @keyframes brillo{0%{filter:drop-shadow(0 0 10px #4fe3ff)}33%{filter:drop-shadow(0 0 16px #3cff6e)}66%{filter:drop-shadow(0 0 16px #ff6fb5)}100%{filter:drop-shadow(0 0 10px #4fe3ff)}}
-    @media (prefers-reduced-motion:reduce){.orb.on img,.orb.on .nucleo{animation-duration:6s}}
+    @keyframes halo{0%,100%{box-shadow:0 0 0 2px #9aa3ad55,0 0 10px 3px #9aa3ad44}50%{box-shadow:0 0 0 7px #9aa3ad33,0 0 22px 9px #9aa3ad33}}
+    @media (prefers-reduced-motion:reduce){.orb.on .nucleo,.orb.on::before{animation-duration:6s}}
   </style>`);
   const mic = Object.assign(document.createElement('button'), { className: 'orb', title: 'Dictar gasto', ariaLabel: 'Dictar gasto' });
   mic.innerHTML = '<img src="img/orb.png" alt=""><img class="nucleo" src="img/orb.png" alt="">';
