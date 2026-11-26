@@ -2,6 +2,7 @@
 import { parse, norm } from './parser.js';
 import { crearConsultas } from './consultas.js';
 import { parseRecordatorio, crearRecordatorios, TRIGGER } from './recordatorios.js';
+import { crearGrabadora, cargarModelo } from './voz-local.js';
 
 export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) {
   const { addDoc, collection } = fs;
@@ -42,10 +43,8 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     u.onend = u.onerror = ok; setTimeout(ok, 15000); speechSynthesis.speak(u);
   });
 
-  // iPhone: en apps de acceso directo la voz web solo funciona la 1.ª vez por carga de página.
-  // Tras cada uso la página se recarga sola (≈1 s) y muestra la confirmación; así cada toque vuelve a ser "la primera vez".
+  // iPhone: la voz del navegador solo funciona una vez por apertura → se usa grabación + Whisper local (voz-local.js).
   const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const recargar = () => { if (ultimo) sessionStorage.setItem('avisoVoz', JSON.stringify(ultimo)); setTimeout(() => location.reload(), 300); };
   const previo = sessionStorage.getItem('avisoVoz');
   if (previo) { sessionStorage.removeItem('avisoVoz'); aviso(...JSON.parse(previo)); }
 
@@ -66,7 +65,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   // Al volver a la app (iPhone/Android): recarga completa de la página.
   let oculta = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { oculta = Date.now(); if (ses) { ses.descartar = true; detener(); } return; }
+    if (document.hidden) { oculta = Date.now(); if (ses) { ses.descartar = true; detener(); } grab?.cancelar(); return; }
     if (Date.now() - oculta > 1000) location.reload(); // volver a la app (minimizada) = recarga completa
   });
   window.addEventListener('pageshow', e => { if (e.persisted) location.reload(); }); // restaurada desde caché
@@ -110,7 +109,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const s = ses = { txt: '', hecho: false, oye: false };
     s.finalizar = () => {
       if (s.hecho) return; s.hecho = true; clearTimeout(s.t); clearTimeout(s.wd); clearTimeout(s.wa);
-      if (!s.descartar) procesar(s.txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000)).finally(() => IOS && recargar());
+      if (!s.descartar) procesar(s.txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
     };
     s.resultado = e => {
       if (s.hecho) return; s.oye = true;
@@ -126,10 +125,9 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     s.wa = setTimeout(() => {
       if (s.oye || s.hecho || ses !== s) return;
       s.descartar = true; s.finalizar(); try { r.abort(); } catch {} r = null; libre();
-      if (IOS) { aviso('Micrófono reiniciado. Toca y habla.', 'info', 5000); return recargar(); }
       if (!esReintento) empezar(true); else aviso('El micrófono no responde. Toca de nuevo.', 'error', 5000);
     }, 4000);
-    estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho… (v15)', 'info', 0);
+    estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
     try { r.start(); } catch { try { r = nuevo(); r.start(); } catch { s.descartar = true; s.finalizar(); r = null; libre(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } }
   }
   mic.onclick = () => {
@@ -138,4 +136,24 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     if ('speechSynthesis' in window) speechSynthesis.cancel(); // la voz de una respuesta ocupa el audio
     empezar();
   };
+
+  // iPhone: un toque → graba → detecta silencio → Whisper local → mismo procesamiento.
+  var grab = null;
+  if (IOS && navigator.mediaDevices?.getUserMedia) {
+    grab = crearGrabadora({
+      alEstado: e => {
+        mic.classList.toggle('on', e === 'escuchando');
+        if (e === 'escuchando') aviso('🎧 Te escucho… (v16)', 'info', 0);
+        if (e === 'procesando') aviso('⏳ Procesando…', 'info', 0);
+      },
+      alTexto: txt => { if (txt) aviso('🎧 ' + txt, 'info', 0); procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000)); },
+      alError: e => aviso('Voz: ' + (e?.message || e), 'error', 7000)
+    });
+    mic.onclick = () => { if ('speechSynthesis' in window) speechSynthesis.cancel(); grab.alternar(); };
+    // Precarga del modelo (descarga única ~40–80 MB, luego queda en caché del teléfono).
+    let mostrado = false;
+    setTimeout(() => cargarModelo(p => {
+      if (p.status === 'progress' && p.total > 5e6) { mostrado = true; aviso(`⬇️ Preparando voz (solo la 1.ª vez, ~76 MB): ${Math.round(p.progress)}%`, 'info', 0); }
+    }).then(() => mostrado && aviso('✅ Voz lista', 'exito', 3000)).catch(e => aviso('No se pudo preparar la voz: ' + (e?.message || e), 'error', 8000)), 800);
+  }
 }
