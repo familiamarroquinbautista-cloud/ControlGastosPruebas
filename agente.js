@@ -54,7 +54,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   // Recargar la página haría que iOS vuelva a pedir el permiso del micrófono.
   let oculta = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { oculta = Date.now(); sesion?.cancelar(); return; }
+    if (document.hidden) { oculta = Date.now(); if (ses) { ses.descartar = true; detener(); } return; }
     if (Date.now() - oculta < 3000) return;
     consultas.limpiar(); recs.limpiar(); refrescar(); avisarPendientes();
   });
@@ -72,47 +72,57 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     aviso(txt ? `No entendí "${txt}". Ej: "almuerzo 25 mil"` : 'No te escuché. Toca y habla.', 'error', 6000);
   }
 
+  // Dictado con UNA instancia reutilizable (iOS falla al crear instancias nuevas o usar abort()).
+  // Estados: idle → listening → stopping → idle. Un toque durante "stopping" queda en cola.
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let sesion = null;
+  let r = null, estado = 'idle', ses = null, enCola = false, tFin;
+  const libre = () => { clearTimeout(tFin); estado = 'idle'; ses = null; mic.classList.remove('on'); if (enCola) { enCola = false; empezar(); } };
+  function nuevo() {
+    const x = new SR(); x.lang = 'es-CO'; x.interimResults = true; x.maxAlternatives = 1; x.continuous = false;
+    x.onaudiostart = () => { if (x === r && ses) ses.oye = true; };
+    x.onresult = e => { if (x === r && ses) ses.resultado(e); };
+    x.onerror = e => { if (x !== r || !ses) return; if (!['no-speech', 'aborted'].includes(e.error)) { ses.descartar = true; aviso('Micrófono: ' + e.error, 'error', 5000); } };
+    x.onend = () => { if (x !== r) return; ses?.finalizar(); libre(); };
+    return x;
+  }
+  function detener() {
+    const s = ses; if (!s || estado !== 'listening') return;
+    s.finalizar(); estado = 'stopping';
+    try { r.stop(); } catch {}
+    tFin = setTimeout(() => { r = null; libre(); }, 1500); // onend nunca llegó → instancia nueva la próxima vez
+  }
+  function empezar(esReintento = false) {
+    if (estado === 'stopping') { enCola = true; return; }
+    if (estado === 'listening') return;
+    if (!r) r = nuevo();
+    const s = ses = { txt: '', hecho: false, oye: false };
+    s.finalizar = () => {
+      if (s.hecho) return; s.hecho = true; clearTimeout(s.t); clearTimeout(s.wd); clearTimeout(s.wa);
+      if (!s.descartar) procesar(s.txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
+    };
+    s.resultado = e => {
+      if (s.hecho) return; s.oye = true;
+      // Android a veces repite la frase acumulada en cada resultado: si un trozo contiene lo anterior, lo reemplaza.
+      s.txt = [...e.results].reduce((acc, x) => { const v = x[0].transcript.trim(); return norm(v).startsWith(norm(acc)) ? v : (acc + ' ' + v).trim(); }, '');
+      aviso('🎧 ' + s.txt, 'info', 0); clearTimeout(s.t);
+      if (e.results[e.results.length - 1].isFinal) return detener();
+      const p = parse(s.txt, cats);
+      if (p.ok && p.monto >= 1000 && !TRIGGER.test(norm(s.txt))) s.t = setTimeout(detener, 900); // frase completa: no esperar el silencio
+    };
+    s.wd = setTimeout(detener, 20000); // seguro: nunca queda "pegada"
+    // Si el micrófono no arranca en 4 s: descartar la instancia y reintentar una vez con una nueva.
+    s.wa = setTimeout(() => {
+      if (s.oye || s.hecho || ses !== s) return;
+      s.descartar = true; s.finalizar(); try { r.abort(); } catch {} r = null; libre();
+      if (!esReintento) empezar(true); else aviso('El micrófono no responde. Toca de nuevo.', 'error', 5000);
+    }, 4000);
+    estado = 'listening'; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
+    try { r.start(); } catch { try { r = nuevo(); r.start(); } catch { s.descartar = true; s.finalizar(); r = null; libre(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } }
+  }
   mic.onclick = () => {
     if (!SR) return aviso('Este navegador no tiene dictado. Usa Chrome, Edge o Safari.', 'error', 6000);
-    // Tocar mientras escucha cierra la sesión directamente (no depende de que el navegador dispare onend).
-    if (sesion) return sesion.cerrar();
-    // La voz de la respuesta anterior ocupa el audio (iOS): callarla y esperar antes de abrir el micrófono.
-    const hablaba = 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
-    if (hablaba) speechSynthesis.cancel();
-    dictar(0, 0); // arranca dentro del toque (requisito iOS); si el audio sigue ocupado, el reintento lo resuelve
+    if (estado === 'listening') return detener(); // tocar mientras escucha: detener y procesar
+    if ('speechSynthesis' in window) speechSynthesis.cancel(); // la voz de una respuesta ocupa el audio
+    empezar();
   };
-  function dictar(intento, espera) {
-    // Cada sesión es independiente: los eventos tardíos de una sesión anterior no afectan la nueva.
-    let txt = '', hecho = false, t;
-    const r = new SR(), yo = {};
-    const wd = setTimeout(() => yo.cerrar(), 20000); // seguro: nunca queda "pegada"
-    const soltar = () => { clearTimeout(t); clearTimeout(wd); if (sesion === yo) { sesion = null; mic.classList.remove('on'); } };
-    yo.cancelar = () => { hecho = true; soltar(); try { r.abort(); } catch {} };
-    const cerrar = yo.cerrar = () => {
-      if (hecho) return; hecho = true; soltar(); try { r.abort(); } catch {}
-      procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
-    };
-    r.lang = 'es-CO'; r.interimResults = true; r.maxAlternatives = 1;
-    let oye = false;
-    r.onaudiostart = () => (oye = true);
-    r.onresult = e => {
-      if (hecho) return; oye = true;
-      // Android a veces repite la frase acumulada en cada resultado: si un trozo contiene lo anterior, lo reemplaza.
-      txt = [...e.results].reduce((acc, x) => { const s = x[0].transcript.trim(); return norm(s).startsWith(norm(acc)) ? s : (acc + ' ' + s).trim(); }, '');
-      aviso('🎧 ' + txt, 'info', 0);
-      clearTimeout(t);
-      if (e.results[e.results.length - 1].isFinal) return cerrar();
-      const p = parse(txt, cats);
-      if (p.ok && p.monto >= 1000 && !TRIGGER.test(norm(txt))) t = setTimeout(cerrar, 900); // frase completa: no esperar el silencio del navegador
-    };
-    r.onerror = e => { if (hecho) return; if (!['no-speech', 'aborted'].includes(e.error)) { hecho = true; soltar(); return aviso('Micrófono: ' + e.error, 'error', 5000); } cerrar(); };
-    r.onend = cerrar;
-    sesion = yo; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
-    // Si el micrófono no arranca en 4 s (audio aún ocupado), reinicia la escucha una vez.
-    if (!intento) setTimeout(() => { if (!oye && !hecho && sesion === yo) { yo.cancelar(); dictar(1, 300); } }, 4000);
-    const iniciar = (n = 0) => { try { r.start(); } catch { if (n < 3) setTimeout(() => iniciar(n + 1), 250); else { hecho = true; soltar(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } } };
-    if (espera) setTimeout(iniciar, espera); else iniciar();
-  }
 }
