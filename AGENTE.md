@@ -1,5 +1,7 @@
 # Configurar el agente en ElevenLabs (mínimo costo)
 
+> 🎙️ (botón grande) = dictado local: registra en ~1 s sin usar ElevenLabs. 🤖 (botón pequeño) = agente, para casos que el dictado no entienda.
+
 1. elevenlabs.io → **Agents** → *Create agent* → *Blank*.
 2. **Agent**
    - First message: *(vacío)* · Language: Spanish
