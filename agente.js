@@ -17,7 +17,8 @@ export function initAgente({ db, perfil, cats, ingresos, fs, refrescar, mostrarM
   tst.style.cssText = 'position:fixed;right:18px;bottom:92px;max-width:80vw;padding:10px 14px;border-radius:10px;background:#1f7a55;color:#fff;font:600 15px system-ui;box-shadow:0 4px 14px #0004;z-index:9999;display:none';
   document.body.appendChild(tst);
   const aviso = (t, tipo = 'exito', ms = 4000) => {
-    if (tipo !== 'info') mostrarMensaje(t, tipo);
+    if (tipo === 'info' && Date.now() < (aviso.lock || 0)) return; // no tapar confirmaciones/errores
+    if (tipo !== 'info') { mostrarMensaje(t, tipo); aviso.lock = Date.now() + ms; }
     tst.textContent = t; tst.style.background = tipo === 'error' ? '#b3261e' : tipo === 'info' ? '#33475b' : '#1f7a55';
     tst.style.display = 'block'; if (tipo === 'exito') navigator.vibrate?.(120);
     clearTimeout(aviso.h); if (ms) aviso.h = setTimeout(() => (tst.style.display = 'none'), ms);
