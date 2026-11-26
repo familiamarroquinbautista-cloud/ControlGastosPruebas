@@ -235,6 +235,40 @@ body{
   transition:opacity .3s ease;
 }
 
+
+/* ================= HERO CON TARJETAS ================= */
+.main-content.hero{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;text-align:center;
+  background:radial-gradient(120% 70% at 50% 0%,#1b2440 0%,#0b1020 55%,#070a14 100%)}
+.hero-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #ffffff14}
+.hero-logo{display:flex;align-items:center;gap:8px;font-size:1.05rem}
+.hero-logo img{width:28px;height:28px}
+.hero-tag{font-size:.72rem;color:#94a3b8;letter-spacing:.14em;text-transform:uppercase}
+.hero-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:0 16px}
+.hero-top{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 0 8px}
+.hero h1{font-size:clamp(2.1rem,9vw,3.8rem);line-height:1.06;font-weight:700;letter-spacing:-.025em;color:#f8fafc;max-width:15ch}
+.hero h1 em{font-style:italic;background:linear-gradient(90deg,#7dd3fc,#c4b5fd,#f9a8d4);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.hero p{margin-top:14px;color:#94a3b8;max-width:30ch;line-height:1.5;font-size:1rem}
+.hero-btns{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap;justify-content:center}
+.orb-btn{display:flex;align-items:center;gap:10px;padding:8px 22px 8px 8px;border-radius:999px;border:1px solid #ffffff26;cursor:pointer;
+  background:linear-gradient(180deg,#1e293b,#0f172a);color:#fff;font-size:1rem;font-weight:600;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 8px 24px #0007,inset 0 1px 0 #ffffff1f;transition:transform .2s,box-shadow .25s}
+.orb-btn img{width:36px;height:36px;transition:transform .7s cubic-bezier(.34,1.56,.64,1)}
+.orb-btn:hover{transform:translateY(-2px);box-shadow:0 0 26px #7dd3fc40,0 8px 24px #0007,inset 0 1px 0 #ffffff1f}
+.orb-btn:hover img{transform:rotate(200deg) scale(1.08)}
+.orb-btn:active{transform:scale(.96)}
+.fan{position:relative;flex:none;width:100%;--w:clamp(130px,min(44vw,30vh),230px);--paso:clamp(62px,19vw,125px);height:calc(var(--w) * 1.4667 - 36px)}
+.fan .card{position:absolute;bottom:-36px;left:50%;width:var(--w);aspect-ratio:3/4.4;margin-left:calc(var(--w) / -2);border-radius:18px;overflow:hidden;
+  box-shadow:0 18px 40px #000a;outline:2px solid #ffffff2e;transform-origin:50% 100%;opacity:0;
+  transform:translateX(calc(var(--i) * var(--paso))) translateY(70px) rotate(var(--r))}
+.fan .card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.main-content.visible .fan .card{animation:sube .65s cubic-bezier(.22,1,.36,1) var(--d) forwards}
+@keyframes sube{to{opacity:1;transform:translateX(calc(var(--i) * var(--paso))) translateY(0) rotate(var(--r))}}
+.a1,.a2,.a3{opacity:0;transform:translateY(20px)}
+.main-content.visible .a1{animation:entra .6s ease-out .2s forwards}
+.main-content.visible .a2{animation:entra .5s ease-out .38s forwards}
+.main-content.visible .a3{animation:entra .4s ease-out .52s forwards}
+@keyframes entra{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.a1,.a2,.a3,.fan .card{animation-duration:.01s!important}}
 </style>
 </head>
 
@@ -255,17 +289,27 @@ body{
   <div id="splashSkip" class="splash-skip"><span>Toca para entrar</span><i></i></div>
 </div>
 
-<!-- MAIN -->
-<div id="mainContent" class="main-content">
-  <h2>Selecciona tu perfil</h2>
-
-  <div class="perfiles">
-    <div class="perfil-card" onclick="seleccionarPerfil('Maria')">
-      Maria
+<!-- MAIN: hero con tarjetas en abanico -->
+<div id="mainContent" class="main-content hero">
+  <nav class="hero-nav">
+    <div class="hero-logo"><img src="img/orb.png" alt=""><b>App Marsol</b></div>
+    <span class="hero-tag">Control de gastos</span>
+  </nav>
+  <div class="hero-body">
+    <div class="hero-top">
+    <h1 class="a1">Controla tus <em>gastos</em><br>con tu voz</h1>
+    <p class="a2">Registra, consulta y recuerda tus pagos en segundos.</p>
+    <div class="hero-btns a3">
+      <button class="orb-btn" onclick="seleccionarPerfil('Maria')"><img src="img/orb.png" alt=""><span>Soy María</span></button>
+      <button class="orb-btn" onclick="seleccionarPerfil('Andres')"><img src="img/orb.png" alt=""><span>Soy Andrés</span></button>
     </div>
-
-    <div class="perfil-card" onclick="seleccionarPerfil('Andres')">
-      Andres
+    </div>
+    <div class="fan" aria-hidden="true">
+      <div class="card" style="--i:-2;--r:-22deg;--d:0.9s;z-index:10"><img src="img/splash/2.jpg" alt="" draggable="false"></div>
+      <div class="card" style="--i:-1;--r:-11deg;--d:0.75s;z-index:20"><img src="img/splash/4.jpg" alt="" draggable="false"></div>
+      <div class="card" style="--i:0;--r:0deg;--d:0.6s;z-index:30"><img src="img/splash/1.jpg" alt="" draggable="false"></div>
+      <div class="card" style="--i:1;--r:11deg;--d:0.75s;z-index:20"><img src="img/splash/3.jpg" alt="" draggable="false"></div>
+      <div class="card" style="--i:2;--r:22deg;--d:0.9s;z-index:10"><img src="img/splash/5.jpg" alt="" draggable="false"></div>
     </div>
   </div>
 </div>
