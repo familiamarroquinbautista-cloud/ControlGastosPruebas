@@ -78,6 +78,12 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     if (!SR) return aviso('Este navegador no tiene dictado. Usa Chrome, Edge o Safari.', 'error', 6000);
     // Tocar mientras escucha cierra la sesión directamente (no depende de que el navegador dispare onend).
     if (sesion) return sesion.cerrar();
+    // La voz de la respuesta anterior ocupa el audio (iOS): callarla y esperar antes de abrir el micrófono.
+    const hablaba = 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
+    if (hablaba) speechSynthesis.cancel();
+    dictar(0, 0); // arranca dentro del toque (requisito iOS); si el audio sigue ocupado, el reintento lo resuelve
+  };
+  function dictar(intento, espera) {
     // Cada sesión es independiente: los eventos tardíos de una sesión anterior no afectan la nueva.
     let txt = '', hecho = false, t;
     const r = new SR(), yo = {};
@@ -89,8 +95,10 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
     };
     r.lang = 'es-CO'; r.interimResults = true; r.maxAlternatives = 1;
+    let oye = false;
+    r.onaudiostart = () => (oye = true);
     r.onresult = e => {
-      if (hecho) return;
+      if (hecho) return; oye = true;
       // Android a veces repite la frase acumulada en cada resultado: si un trozo contiene lo anterior, lo reemplaza.
       txt = [...e.results].reduce((acc, x) => { const s = x[0].transcript.trim(); return norm(s).startsWith(norm(acc)) ? s : (acc + ' ' + s).trim(); }, '');
       aviso('🎧 ' + txt, 'info', 0);
@@ -102,7 +110,9 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     r.onerror = e => { if (hecho) return; if (!['no-speech', 'aborted'].includes(e.error)) { hecho = true; soltar(); return aviso('Micrófono: ' + e.error, 'error', 5000); } cerrar(); };
     r.onend = cerrar;
     sesion = yo; mic.classList.add('on'); aviso('🎧 Te escucho…', 'info', 0);
+    // Si el micrófono no arranca en 4 s (audio aún ocupado), reinicia la escucha una vez.
+    if (!intento) setTimeout(() => { if (!oye && !hecho && sesion === yo) { yo.cancelar(); dictar(1, 300); } }, 4000);
     const iniciar = (n = 0) => { try { r.start(); } catch { if (n < 3) setTimeout(() => iniciar(n + 1), 250); else { hecho = true; soltar(); aviso('Micrófono ocupado, toca de nuevo.', 'error', 4000); } } };
-    iniciar();
-  };
+    if (espera) setTimeout(iniciar, espera); else iniciar();
+  }
 }
