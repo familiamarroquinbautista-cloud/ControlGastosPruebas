@@ -1434,7 +1434,7 @@
       window.cambiarTipoMovimiento('gasto');
     }, 100);
 
-    // Agente de voz ElevenLabs
+    // Registro por voz (dictado local, sin costo)
     import('./agente.js').then(m => m.initAgente({
       db, perfil, cats: subcategoriasGasto, ingresos: ['Nomina', 'Prima', 'Prestamo', 'Subsidio', 'Otros'],
       fs: { addDoc, collection, getDocs, query, where },
