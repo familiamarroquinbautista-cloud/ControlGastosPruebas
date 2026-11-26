@@ -1433,6 +1433,13 @@
       window.seleccionarMetodoPago('debito');
       window.cambiarTipoMovimiento('gasto');
     }, 100);
+
+    // Agente de voz ElevenLabs
+    import('./agente.js').then(m => m.initAgente({
+      db, perfil, cats: subcategoriasGasto, ingresos: ['Nomina', 'Prima', 'Prestamo', 'Subsidio', 'Otros'],
+      fs: { addDoc, collection, getDocs, query, where },
+      refrescar: () => { calcularSaldo(); cargarHistorial(); }, mostrarMensaje
+    }));
   </script>
 </body>
 </html>
