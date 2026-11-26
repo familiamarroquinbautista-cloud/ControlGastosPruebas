@@ -46,7 +46,7 @@ export function categoria(t, cats) {
     prueba(nombreRe(c), c, 'Otros', true);
   }
   cand.sort((a, b) => a[3] - b[3] || b[4] - a[4] || a[2] - b[2]);
-  return cand[0]?.slice(0, 4) || null;
+  return cand[0] || null; // [cat, sub, entera, posición, largo]
 }
 
 const W = Object.fromEntries(('un:1 uno:1 una:1 dos:2 tres:3 cuatro:4 cinco:5 seis:6 siete:7 ocho:8 nueve:9 diez:10 once:11 doce:12 trece:13 catorce:14 quince:15 dieciseis:16 diecisiete:17 dieciocho:18 diecinueve:19 veinte:20 veintiun:21 veintiuno:21 veintidos:22 veintitres:23 veinticuatro:24 veinticinco:25 veintiseis:26 veintisiete:27 veintiocho:28 veintinueve:29 treinta:30 cuarenta:40 cincuenta:50 sesenta:60 setenta:70 ochenta:80 noventa:90 cien:100 ciento:100 doscientos:200 trescientos:300 cuatrocientos:400 quinientos:500 seiscientos:600 setecientos:700 ochocientos:800 novecientos:900')
@@ -81,7 +81,24 @@ const ING = [['Nomina', 'nomina|sueldo|salario|quincena'], ['Prima', 'prima'], [
 const SPEND = /\b(pague|gaste|gastamos|compre|compramos|pago|tanquee)\b/;
 const PREGUNTA = /^(cuanto|cuantos|cuanta|que|cual|cuales|como|muestrame|dame|resumen|en que)\b|\bdime\b/;
 
-/** → {pregunta:true} | {tipo:'gasto'|'ingreso', categoria, subcategoria, monto, metodo, dias, ok} */
+// Detalle/observación: lo que queda tras quitar categoría, monto, método, día y conectores.
+// "almuerzo 250.000 en Carulla" → "Carulla".
+const RELLENO = new Set('pague pago pagamos gaste gastamos compre compramos tanquee pesos peso ingreso ingresos hoy ayer antier anteayer credito debito efectivo tarjeta tc'.split(' '));
+const CONECT = new Set('en de del para por a al la el los las un una y con donde que'.split(' '));
+export function detalle(raw, cats, ing) {
+  const tk = raw.split(/\s+/).map(w => [w, norm(w)]).filter(([, n]) => n);
+  const t = tk.map(x => x[1]).join(' '), quitar = new Set();
+  const span = (i0, len) => { let p = 0; tk.forEach(([, n], i) => { if (p < i0 + len && p + n.length > i0) quitar.add(i); p += n.length + 1; }); };
+  if (ing) for (const [, r] of ING) { const m = r.exec(t); if (m) span(m.index, m[0].length); }
+  else { const cs = categoria(t, cats); if (cs) span(cs[3], cs[4]); }
+  tk.forEach(([, n], i) => { const w = n.replace(/^[^\w$]+|[^\w]+$/g, ''); if (RELLENO.has(w) || /^\$?\d/.test(w) || has(W, w) || has(MULT, w)) quitar.add(i); });
+  const r = tk.filter((_, i) => !quitar.has(i)).map(x => x[0].replace(/[.,;:]+$/, ''));
+  while (r.length && CONECT.has(norm(r[0]))) r.shift();
+  while (r.length && CONECT.has(norm(r.at(-1)))) r.pop();
+  return r.join(' ');
+}
+
+/** → {pregunta:true} | {tipo:'gasto'|'ingreso', categoria, subcategoria, monto, metodo, dias, desc, ok} */
 export function parse(raw, cats) {
   const t = norm(raw);
   const cs = categoria(t, cats);
@@ -94,6 +111,7 @@ export function parse(raw, cats) {
     tipo: ing ? 'ingreso' : 'gasto', categoria: ing ? null : cs?.[0], subcategoria: ing ? ing[0] : cs?.[1], monto: m,
     metodo: /\b(credito|con (?:la )?tarjeta|tc)\b/.test(t) ? 'credito' : 'debito',
     dias: /\b(antier|anteayer|ante ayer)\b/.test(t) ? 2 : /\bayer\b/.test(t) ? 1 : 0,
+    desc: detalle(raw, cats, !!ing),
     ok: m > 0 && !!(ing || cs)
   };
 }

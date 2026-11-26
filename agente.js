@@ -1,6 +1,7 @@
 // Registro por voz: dictado del navegador + intérprete local. Sin servicios pagos ($0).
-import { parse } from './parser.js';
+import { parse, norm } from './parser.js';
 import { crearConsultas } from './consultas.js';
+import { parseRecordatorio, crearRecordatorios, TRIGGER } from './recordatorios.js';
 
 export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) {
   const { addDoc, collection } = fs;
@@ -38,7 +39,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
   const fecha = dias => { const d = new Date(); d.setDate(d.getDate() - dias); return { fecha: d, mes: d.getMonth() + 1, año: d.getFullYear() }; };
   // Confirmación optimista: aviso inmediato, la escritura sigue en segundo plano.
   function guardar(p, txt) {
-    const ing = p.tipo === 'ingreso', base = { usuario: perfil, descripcion: txt.slice(0, 120), monto: p.monto, ...fecha(p.dias) };
+    const ing = p.tipo === 'ingreso', base = { usuario: perfil, descripcion: (p.desc || txt).slice(0, 120), monto: p.monto, ...fecha(p.dias) };
     const datos = ing ? { ...base, tipoIngreso: p.subcategoria, tipoMov: 'ingreso' }
       : { ...base, categoria: p.categoria, subcategoria: p.subcategoria, metodoPago: p.metodo, tipoMov: 'gasto' };
     aviso(`✅ ${ing ? 'Ingreso' : 'Gasto'} registrado: ${COP(p.monto)} · ${ing ? p.subcategoria : p.categoria + ' - ' + p.subcategoria}`);
@@ -46,6 +47,21 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       .catch(e => { aviso('❌ No se guardó: ' + (e?.code || e?.message), 'error', 8000); mostrarMensaje('No se guardó el registro', 'error'); });
   }
   const consultas = crearConsultas({ db, perfil, cats, fs });
+  const recs = crearRecordatorios({ db, perfil, fs });
+  recs.avisoInicio().then(m => m && aviso(m, 'info', 10000)).catch(() => {});
+  const PEND = /pendiente|por pagar|recordatorio|vence|venc|proxim\w* pago|tengo que pagar|que debo/;
+
+  // Orden: pregunta ("dime") → recordatorio (fecha a futuro) → gasto/ingreso → "ya pagué X".
+  async function procesar(txt) {
+    const p = parse(txt, cats), t = norm(txt);
+    if (p.pregunta) { const r = PEND.test(t) ? await recs.listar() : await consultas.responder(txt); aviso(r, 'info', 10000); return hablar(r); }
+    const rc = parseRecordatorio(txt);
+    if (rc?.falta) return aviso('¿Para qué fecha? Ej: "recuérdame pagar la hipoteca el 27 de noviembre"', 'error', 7000);
+    if (rc) return aviso(await recs.crear(rc), 'exito', 6000);
+    if (p.ok) { guardar(p, txt); recs.marcarSiCoincide(txt).then(m => m && setTimeout(() => aviso(m, 'exito', 5000), 2500)).catch(() => {}); return; }
+    if (/\b(pague|pagado|pagada|ya se pago)\b/.test(t)) { const m = await recs.marcarSiCoincide(txt); if (m) return aviso(m, 'exito', 5000); }
+    aviso(txt ? `No entendí "${txt}". Ej: "almuerzo 25 mil"` : 'No te escuché. Toca y habla.', 'error', 6000);
+  }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null;
@@ -58,10 +74,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
     const soltar = () => { clearTimeout(t); if (rec === r) { rec = null; mic.classList.remove('on'); } };
     const cerrar = () => {
       if (hecho) return; hecho = true; soltar(); try { r.abort(); } catch {}
-      const p = parse(txt, cats);
-      if (p.pregunta) return consultas.responder(txt).then(r => { aviso(r, 'info', 9000); hablar(r); }).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error'));
-      if (p.ok) return guardar(p, txt);
-      aviso(txt ? `No entendí "${txt}". Ej: "almuerzo 25 mil"` : 'No te escuché. Toca y habla.', 'error', 6000);
+      procesar(txt).catch(e => aviso('❌ ' + (e?.code || e?.message), 'error', 6000));
     };
     r.lang = 'es-CO'; r.interimResults = true; r.maxAlternatives = 1;
     r.onresult = e => {
@@ -71,7 +84,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       clearTimeout(t);
       if (e.results[e.results.length - 1].isFinal) return cerrar();
       const p = parse(txt, cats);
-      if (p.ok) t = setTimeout(cerrar, 800); // frase completa: no esperar el silencio del navegador
+      if (p.ok && !TRIGGER.test(norm(txt))) t = setTimeout(cerrar, 800); // frase completa: no esperar el silencio del navegador
     };
     r.onerror = e => { if (!hecho && !['no-speech', 'aborted'].includes(e.error)) aviso('Micrófono: ' + e.error, 'error', 5000); };
     r.onend = cerrar;
