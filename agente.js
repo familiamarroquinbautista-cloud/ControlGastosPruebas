@@ -150,10 +150,7 @@ export function initAgente({ db, perfil, cats, fs, refrescar, mostrarMensaje }) 
       alError: e => aviso('Voz: ' + (e?.message || e), 'error', 7000)
     });
     mic.onclick = () => { if ('speechSynthesis' in window) speechSynthesis.cancel(); grab.alternar(); };
-    // Precarga del modelo (descarga única ~40–80 MB, luego queda en caché del teléfono).
-    let mostrado = false;
-    setTimeout(() => cargarModelo(p => {
-      if (p.status === 'progress' && p.total > 5e6) { mostrado = true; aviso(`⬇️ Preparando voz (solo la 1.ª vez, ~76 MB): ${Math.round(p.progress)}%`, 'info', 0); }
-    }).then(() => mostrado && aviso('✅ Voz lista', 'exito', 3000)).catch(e => aviso('No se pudo preparar la voz: ' + (e?.message || e), 'error', 8000)), 800);
+    // Precarga silenciosa del modelo (descarga única, luego queda en caché del teléfono).
+    setTimeout(() => cargarModelo().catch(() => {}), 800);
   }
 }
